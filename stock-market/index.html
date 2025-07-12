@@ -114,7 +114,7 @@
       let x = Math.sin(seed) * 10000;
       return x - Math.floor(x);
     }
-    url = url + "8";
+    
 
     function getPrice(currency, timestamp) {
       const t = roundTime5s(timestamp);
@@ -214,7 +214,7 @@
     }
 
     function sendToWebhook(action, currency, amount, price) {
-      fetch(url + "8", {
+      fetch(url + "88", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
