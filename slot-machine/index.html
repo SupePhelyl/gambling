@@ -103,7 +103,7 @@
   </div>
 
   <script>
-     const playButton = document.querySelector('button');
+    const playButton = document.querySelector('button');
     const symbols = ['🍒', '🍋', '🍇', '🔔', '⭐', '💎'];
     const hellSymbols = ['🔥', '👹', '💀', '😈', '☠️', '👺'];
     const slotEls = [document.getElementById("slot1"), document.getElementById("slot2"), document.getElementById("slot3")];
@@ -172,24 +172,6 @@
       const bet = parseFloat(betInput.value);
       playButton.disabled = true;
 
-
-      if (bet === 192168) {
-        localStorage.clear();
-        location.reload();
-        return;
-      }
-
-      if (isNaN(bet) || bet <= 0) {
-        resultDisplay.textContent = "Wpisz poprawną kwotę zakładu!";
-        return;
-      }
-
-      if (bet > balance) {
-        resultDisplay.textContent = "Za mało środków!";
-        return;
-      }
-
-      // Aktywuj/Dezaktywuj tryb piekielny
       if (bet === 666) {
         hellMode = true;
         document.body.classList.add('hell-mode');
@@ -200,6 +182,29 @@
         hellMode = false;
         document.body.classList.remove('hell-mode');
       }
+
+
+      if (bet === 192168) {
+        localStorage.clear();
+        location.reload();
+        playButton.disabled = false;
+        return;
+      }
+
+      if (isNaN(bet) || bet <= 0) {
+        resultDisplay.textContent = "Wpisz poprawną kwotę zakładu!";
+        playButton.disabled = false;
+        return;
+      }
+
+      if (bet > balance) {
+        resultDisplay.textContent = "Za mało środków!";
+        playButton.disabled = false;
+        return;
+      }
+
+      // Aktywuj/Dezaktywuj tryb piekielny
+      
 
       resultDisplay.textContent = "Kręcimy...";
       slotEls.forEach(el => el.classList.remove("win"));
