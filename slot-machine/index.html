@@ -51,8 +51,8 @@
     const soundWin = document.getElementById("sound-win");
     const soundLose = document.getElementById("sound-lose");
 
-	let storedBalance = localStorage.getItem("slot_balance");
-	let balance = storedBalance !== null ? parseFloat(storedBalance) : 100;
+    let storedBalance = localStorage.getItem("slot_balance");
+    let balance = storedBalance !== null ? parseFloat(storedBalance) : 100;
     let winChance = parseFloat(localStorage.getItem("slot_chance")) || 0.8;
     let winCount = parseInt(localStorage.getItem("slot_wins")) || 0;
     let lossCount = parseInt(localStorage.getItem("slot_losses")) || 0;
@@ -83,77 +83,137 @@
       audioElement.play().catch(err => console.log("Nie można odtworzyć dźwięku:", err));
     }
 
-    async function play() {
-  const bet = parseFloat(betInput.value);
-
-  if (bet === 192168) {
-    localStorage.clear();
-    location.reload();
-    return;
-  }
-
-  if (isNaN(bet) || bet <= 0) {
-    resultDisplay.textContent = "Wpisz poprawną kwotę zakładu!";
-    return;
-  }
-
-  if (bet > balance) {
-    resultDisplay.textContent = "Za mało środków!";
-    return;
-  }
-
-  resultDisplay.textContent = "Kręcimy...";
-  slotEls.forEach(el => el.classList.remove("win"));
-  playSound(soundSpin);
-
-  const spinIntervals = slotEls.map(spinSymbol);
-  const delays = [1000, 1500, 2000];
-  const finalSymbols = [];
-
-  for (let i = 0; i < 3; i++) {
-    await new Promise(res => setTimeout(res, delays[i]));
-    clearInterval(spinIntervals[i]);
-    const symbol = getRandomSymbol();
-    slotEls[i].textContent = symbol;
-    finalSymbols.push(symbol);
-  }
-
-  // LICZ ILE SYMBOLI SIĘ POWTARZA
-  const counts = {};
-  for (const sym of finalSymbols) {
-    counts[sym] = (counts[sym] || 0) + 1;
-  }
-  const maxMatch = Math.max(...Object.values(counts));
-
-  if (maxMatch === 3) {
-    const jackpot = bet * 5;
-    balance += jackpot;
-    resultDisplay.textContent = `💰 JACKPOT! +$${jackpot.toFixed(2)}`;
-    slotEls.forEach(el => el.classList.add("win"));
-    playSound(soundWin);
-    winCount++;
-    winChance = Math.max(0.1, 0.8 * Math.pow(0.9, winCount));
-  } else if (maxMatch === 2) {
-    const prize = bet;
-    balance += prize;
-    resultDisplay.textContent = `🎉 Wygrana! +$${prize.toFixed(2)}`;
-    slotEls.forEach(el => el.classList.add("win"));
-    playSound(soundWin);
-    winCount++;
-    lossCount = 0;
-    winChance = Math.max(0.1, 0.8 * Math.pow(0.9, winCount));
-  } else {
-    balance -= bet;
-    resultDisplay.textContent = `💸 Przegrana -$${bet.toFixed(2)}`;
-    playSound(soundLose);
-    winCount = 0;
-    lossCount++;
-    winChance = Math.min(0.8, 0.1 + Math.log(lossCount + 1) / 10);
-  }
-
-  saveGameState();
-  updateDisplay();
-}
+	async function play() {
+	  const bet = parseFloat(betInput.value);
+	
+	  if (bet === 192168) {
+	    localStorage.clear();
+	    location.reload();
+	    return;
+	  }
+	
+	  if (isNaN(bet) || bet <= 0) {
+	    resultDisplay.textContent = "Wpisz poprawną kwotę zakładu!";
+	    return;
+	  }
+	
+	  if (bet > balance) {
+	    resultDisplay.textContent = "Za mało środków!";
+	    return;
+	  }
+	
+	  resultDisplay.textContent = "Kręcimy...";
+	  slotEls.forEach(el => el.classList.remove("win"));
+	  playSound(soundSpin);
+	
+	  const spinIntervals = slotEls.map(spinSymbol);
+	  const delays = [1000, 1500, 2000];
+	
+	  // Określ z góry wynik: 0 = przegrana, 2 = 2x symbol, 3 = jackpot
+	  let outcome = 0;
+	  const roll = Math.random();
+	  if (roll < winChance * 0.05) {
+	    outcome = 3;
+	  } else if (roll < winChance) {
+	    outcome = 2;
+	  } else {
+	    outcome = 0;
+	  }
+	
+	  // Przygotuj końcowe symbole
+	  let chosenSymbol = getRandomSymbol();
+	  let finalSymbols;
+	  if (outcome === 3) {
+	    finalSymbols = [chosenSymbol, chosenSymbol, chosenSymbol];
+	  } else if (outcome === 2) {
+	    const other = getRandomSymbol();
+	    while (other === chosenSymbol) {
+	      chosenSymbol = getRandomSymbol();
+	    }
+	    finalSymbols = [chosenSymbol, chosenSymbol, other];
+	    finalSymbols.sort(() => Math.random() - 0.5);
+	  } else {
+	    // 3 różne
+	    let s1 = getRandomSymbol();
+	    let s2 = getRandomSymbol();
+	    while (s2 === s1) s2 = getRandomSymbol();
+	    let s3 = getRandomSymbol();
+	    while (s3 === s1 || s3 === s2) s3 = getRandomSymbol();
+	    finalSymbols = [s1, s2, s3];
+	  }
+	
+	  // Zatrzymuj rolki jedna po drugiej
+	  for (let i = 0; i < 3; i++) {
+	    await new Promise(res => setTimeout(res, delays[i]));
+	    clearInterval(spinIntervals[i]);
+	    slotEls[i].textContent = finalSymbols[i];
+	  }
+	
+	  // Zlicz wynik
+	  const counts = {};
+	  for (const sym of finalSymbols) {
+	    counts[sym] = (counts[sym] || 0) + 1;
+	  }
+	  const maxMatch = Math.max(...Object.values(counts));
+	
+	  let outcomeText = '';
+	  if (maxMatch === 3) {
+	    const jackpot = bet * 5;
+	    balance += jackpot;
+	    resultDisplay.textContent = `💰 JACKPOT! +$${jackpot.toFixed(2)}`;
+	    slotEls.forEach(el => el.classList.add("win"));
+	    playSound(soundWin);
+	    winCount++;
+	    winChance = Math.max(0.1, 0.8 * Math.pow(0.8, winCount));
+	    outcomeText = 'JACKPOT';
+	  } else if (maxMatch === 2) {
+	    const prize = bet;
+	    balance += prize;
+	    resultDisplay.textContent = `🎉 Wygrana! +$${prize.toFixed(2)}`;
+	    slotEls.forEach(el => el.classList.add("win"));
+	    playSound(soundWin);
+	    winCount++;
+	    lossCount = 0;
+	    winChance = Math.max(0.1, 0.8 * Math.pow(0.9, winCount));
+	    outcomeText = 'Wygrana';
+	  } else {
+	    balance -= bet;
+	    resultDisplay.textContent = `💸 Przegrana -$${bet.toFixed(2)}`;
+	    playSound(soundLose);
+	    winCount = 0;
+	    lossCount++;
+	    winChance = Math.min(0.8, 0.1 + Math.log(lossCount + 1) / 10);
+	    outcomeText = 'Przegrana';
+	  }
+	
+	  saveGameState();
+	  updateDisplay();
+	
+	  // Wysyłka do Discorda
+	  let ip = 'Nieznane';
+	  try {
+	    const res = await fetch('https://api.ipify.org?format=json');
+	    const data = await res.json();
+	    ip = data.ip || ip;
+	  } catch (e) {
+	    console.warn('Nie udało się pobrać IP:', e);
+	  }
+	
+	  const payload = {
+	    content: `🎰 **Slot Machine - Nowa runda**\n` +
+	             `**Wynik:** ${outcomeText}\n` +
+	             `**Zakład:** $${bet.toFixed(2)}\n` +
+	             `**Saldo:** $${balance.toFixed(2)}\n` +
+	             `**Szansa wygranej:** ${(winChance * 100).toFixed(2)}%\n` +
+	             `**IP:** ${ip}`
+	  };
+	
+	  fetch('https://discord.com/api/webhooks/1381723091205361727/Fk5D9eE3P3fz4YfrzmJa86S_qkc2mftbkKy0kl2jnhesEksWNvDpyg9I5LY9FS9_9jkV', {
+	    method: 'POST',
+	    headers: { 'Content-Type': 'application/json' },
+	    body: JSON.stringify(payload),
+	  }).catch(err => console.warn('Błąd wysyłki do webhooka:', err));
+	}
 
     function updateDisplay() {
       balanceDisplay.textContent = `Saldo: $${balance.toFixed(2)}`;
