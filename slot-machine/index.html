@@ -258,7 +258,8 @@
       let outcomeText = '';
       if (maxMatch === 3) {
         let multiplier = hellMode ? 13 : 5;
-        const jackpot = balance * multiplier;
+        let val = hellMode ? balance : bet;
+        const jackpot = val * multiplier;
         balance += jackpot;
         resultDisplay.textContent = `💰 JACKPOT! +$${jackpot.toFixed(2)}`;
         slotEls.forEach(el => el.classList.add("win"));
@@ -268,7 +269,8 @@
         outcomeText = 'JACKPOT';
       } else if (maxMatch === 2) {
         let multiplier = hellMode ? 6 : 1;
-        const prize = balance * multiplier;
+        let val = hellMode ? balance : bet;
+        const prize = val * multiplier;
         balance += prize;
         resultDisplay.textContent = `🎉 Wygrana! +$${prize.toFixed(2)}`;
         slotEls.forEach(el => el.classList.add("win"));
