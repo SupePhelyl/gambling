@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Giełda Szalona</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #f5f5f5;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+    .tab {
+      background: #333;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background: #ffd700;
+      color: #000;
+    }
+    .content {
+      background: #222;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+    }
+    .chart-container {
+      width: 100%;
+      max-width: 800px;
+      margin: auto;
+    }
+    canvas {
+      max-height: 300px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #ffd700;
+      color: #000;
+      cursor: pointer;
+    }
+    .stats {
+      margin: 10px 0;
+      font-size: 18px;
+    }
+    .hell {
+      background: #300;
+      color: #f55;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabs" id="tabBar"></div>
+  <div class="content">
+    <div>
+      <input id="username" placeholder="Twoje imię" />
+      <input id="amount" placeholder="Ilość" type="number" />
+      <button onclick="buy()">Kup</button>
+      <button onclick="sell()">Sprzedaj</button>
+    </div>
+    <div class="stats" id="info"></div>
+    <div class="chart-container">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const currencies = ["ALFA", "BETA", "GAMMA", "DELTA", "OMEGA"];
+    const portfolio = JSON.parse(localStorage.getItem("portfolio") || "{}");
+    let balance = parseFloat(localStorage.getItem("balance") || "1000");
+    let username = localStorage.getItem("username") || "";
+    let activeCurrency = currencies[0];
+    let hellMode = false;
+    const ctx = document.getElementById("chart").getContext("2d");
+    let chart;
+    let tabBar = document.getElementById("tabBar");
+    const info = document.getElementById("info");
+
+    document.getElementById("username").value = username;
+
+    function roundTime5s(ts = Date.now()) {
+      return Math.floor(ts / 5000) * 5000;
+    }
+
+    function getTimestamps() {
+      const now = Date.now();
+      const timestamps = [];
+      for (let i = 29; i >= 0; i--) {
+        timestamps.push(roundTime5s(now - i * 5000));
+      }
+      return timestamps;
+    }
+
+    function seedRand(seed) {
+      let x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function getPrice(currency, timestamp) {
+      const t = roundTime5s(timestamp);
+      const day = new Date(t).getDate();
+      const chaos = seedRand(t / 123456 + currency.length * 999 + day);
+      switch (currency) {
+        case "ALFA":
+          return 50 + Math.sin(t / 13333) * 8 + chaos * 5;
+        case "BETA":
+          return 30 + Math.cos(t / 7777) * 12 + Math.sin(t / 2222 + chaos * 3);
+        case "GAMMA":
+          return 80 + (Math.pow(Math.sin(t / 10000), 3) + chaos) * 15;
+        case "DELTA":
+          return 10 + Math.abs(Math.tan(t / 66666 + chaos)) % 20;
+        case "OMEGA":
+          return 100 + (Math.sin(t / 4444) * Math.cos(t / 3210) + chaos) * 25;
+        default:
+          return 1;
+      }
+    }
+
+    function updateChart() {
+      const timestamps = getTimestamps();
+      const data = timestamps.map(t => getPrice(activeCurrency, t));
+      const labels = timestamps.map(t => new Date(t).toLocaleTimeString());
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `${activeCurrency}`,
+            data: data,
+            borderColor: "#ffd700",
+            borderWidth: 2,
+            fill: false,
+            tension: 0.3
+          }]
+        },
+        options: {
+          animation: { duration: 1000 },
+          scales: { y: { beginAtZero: false }},
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      const current = data[data.length - 1];
+      const prev = data[0];
+      const owned = portfolio[activeCurrency] || 0;
+      const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
+      const change = (((current - prev) / prev) * 100).toFixed(2);
+
+      info.innerHTML = `
+        💱 Kurs: $${current.toFixed(2)}<br/>
+        📈 Zmiana 5m: ${change}%<br/>
+        🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>
+        💰 Możesz kupić: ${maxBuy} jednostek<br/>
+        🏦 Saldo: $${balance.toFixed(2)}
+      `;
+    }
+
+    function buildTabs() {
+      tabBar.innerHTML = "";
+      currencies.forEach(c => {
+        const el = document.createElement("div");
+        el.textContent = c;
+        el.className = "tab" + (c === activeCurrency ? " active" : "");
+        el.onclick = () => {
+          activeCurrency = c;
+          buildTabs();
+          updateChart();
+        };
+        tabBar.appendChild(el);
+      });
+    }
+
+    function sendToWebhook(action, currency, amount, price) {
+      fetch("https://discord.com/api/webhooks/1381723091205361727/Fk5D9eE3P3fz4YfrzmJa86S_qkc2mftbkKy0kl2jnhesEksWNvDpyg9I5LY9FS9_9jkV", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `🧾 **${action}**\n👤 ${username}\n💱 ${currency}\n🔢 ${amount}\n💵 $${price.toFixed(2)}\n💰 Saldo: $${balance.toFixed(2)}\n🎒 Portfel: ${JSON.stringify(portfolio)}`
+        })
+      });
+    }
+
+    function buy() {
+      username = document.getElementById("username").value.trim() || "Anon";
+      localStorage.setItem("username", username);
+      const amount = parseFloat(document.getElementById("amount").value);
+      if (amount === 192168) {
+        localStorage.clear(); location.reload(); return;
+      }
+      if (amount === 666) hellMode = true;
+      const price = getPrice(activeCurrency, Date.now());
+      const cost = amount * price;
+      if (!hellMode && cost > balance) return alert("Za mało środków");
+      portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + amount;
+      if (!hellMode) balance -= cost;
+      save();
+      sendToWebhook("Kupno", activeCurrency, amount, price);
+      updateChart();
+    }
+
+    function sell() {
+      const amount = parseFloat(document.getElementById("amount").value);
+      const owned = portfolio[activeCurrency] || 0;
+      const price = getPrice(activeCurrency, Date.now());
+      if (amount > owned) return alert("Za mało jednostek");
+      portfolio[activeCurrency] -= amount;
+      balance += amount * price;
+      save();
+      sendToWebhook("Sprzedaż", activeCurrency, amount, price);
+      updateChart();
+    }
+
+    function save() {
+      localStorage.setItem("balance", balance);
+      localStorage.setItem("portfolio", JSON.stringify(portfolio));
+    }
+
+    setInterval(updateChart, 5000);
+    buildTabs();
+    updateChart();
+  </script>
+</body>
+</html>
