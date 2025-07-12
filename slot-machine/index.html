@@ -197,7 +197,7 @@
         return;
       }
 
-      if (bet > balance) {
+      if (bet > balance && hellMode === false) {
         resultDisplay.textContent = "Za mało środków!";
         playButton.disabled = false;
         return;
