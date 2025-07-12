@@ -130,46 +130,61 @@
       }
     }
 
-    function updateChart() {
-      const timestamps = getTimestamps();
-      const data = timestamps.map(t => getPrice(activeCurrency, t));
-      const labels = timestamps.map(t => new Date(t).toLocaleTimeString());
-
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: `${activeCurrency}`,
-            data: data,
-            borderColor: "#ffd700",
-            borderWidth: 2,
-            fill: false,
-            tension: 0.3
-          }]
-        },
-        options: {
-          animation: { duration: 1000 },
-          scales: { y: { beginAtZero: false }},
-          plugins: { legend: { display: false } }
-        }
-      });
-
-      const current = data[data.length - 1];
-      const prev = data[0];
-      const owned = portfolio[activeCurrency] || 0;
-      const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
-      const change = (((current - prev) / prev) * 100).toFixed(2);
-
-      info.innerHTML = `
-        💱 Kurs: $${current.toFixed(2)}<br/>
-        📈 Zmiana 5m: ${change}%<br/>
-        🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>
-        💰 Możesz kupić: ${maxBuy} jednostek<br/>
-        🏦 Saldo: $${balance.toFixed(2)}
-      `;
-    }
+	function updateChart() {
+	  const now = roundTime5s(Date.now());
+	  const price = getPrice(activeCurrency, now);
+	  const label = new Date(now).toLocaleTimeString();
+	
+	  // Jeśli wykres jeszcze nie istnieje, utwórz go z 30 punktami
+	  if (!chart) {
+	    const timestamps = getTimestamps();
+	    const data = timestamps.map(t => getPrice(activeCurrency, t));
+	    const labels = timestamps.map(t => new Date(t).toLocaleTimeString());
+	
+	    chart = new Chart(ctx, {
+	      type: "line",
+	      data: {
+	        labels: labels,
+	        datasets: [{
+	          label: `${activeCurrency}`,
+	          data: data,
+	          borderColor: "#ffd700",
+	          borderWidth: 2,
+	          fill: false,
+	          tension: 0.3
+	        }]
+	      },
+	      options: {
+	        animation: false,
+	        scales: { y: { beginAtZero: false }},
+	        plugins: { legend: { display: false } }
+	      }
+	    });
+	  } else {
+	    const lastLabel = chart.data.labels[chart.data.labels.length - 1];
+	    if (lastLabel !== label) {
+	      chart.data.labels.push(label);
+	      chart.data.labels.shift();
+	      chart.data.datasets[0].data.push(price);
+	      chart.data.datasets[0].data.shift();
+	      chart.update("none"); // bez animacji
+	    }
+	  }
+	
+	  const current = price;
+	  const prev = chart.data.datasets[0].data[0];
+	  const owned = portfolio[activeCurrency] || 0;
+	  const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
+	  const change = (((current - prev) / prev) * 100).toFixed(2);
+	
+	  info.innerHTML = `
+	    💱 Kurs: $${current.toFixed(2)}<br/>
+	    📈 Zmiana 5m: ${change}%<br/>
+	    🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>
+	    💰 Możesz kupić: ${maxBuy} jednostek<br/>
+	    🏦 Saldo: $${balance.toFixed(2)}
+	  `;
+	}
 
     function buildTabs() {
       tabBar.innerHTML = "";
