@@ -72,6 +72,10 @@
       <button onclick="buy()">Kup</button>
       <button onclick="sell()">Sprzedaj</button>
     </div>
+    <div>
+      <button onclick="buyAll()">Kup wszystkie</button>
+      <button onclick="sellAll()">Sprzedaj wszystkie</button>
+    </div>
     <div class="stats" id="info"></div>
     <div class="chart-container">
       <canvas id="chart"></canvas>
@@ -130,12 +134,16 @@
       }
     }
 
-	function updateChart() {
+    function updateChart() {
 	  const now = roundTime5s(Date.now());
-	  const price = getPrice(activeCurrency, now);
-	  const label = new Date(now).toLocaleTimeString();
 	
-	  // Jeśli wykres jeszcze nie istnieje, utwórz go z 30 punktami
+	  // Jeśli zmieniamy zakładkę (wykres już istnieje i jest z inną walutą),
+	  // to tworzymy nowy wykres od zera dla activeCurrency
+	  if (chart && chart.data.datasets[0].label !== activeCurrency) {
+	    chart.destroy();
+	    chart = null;
+	  }
+	
 	  if (!chart) {
 	    const timestamps = getTimestamps();
 	    const data = timestamps.map(t => getPrice(activeCurrency, t));
@@ -146,7 +154,7 @@
 	      data: {
 	        labels: labels,
 	        datasets: [{
-	          label: `${activeCurrency}`,
+	          label: activeCurrency,
 	          data: data,
 	          borderColor: "#ffd700",
 	          borderWidth: 2,
@@ -161,17 +169,19 @@
 	      }
 	    });
 	  } else {
+	    const price = getPrice(activeCurrency, now);
+	    const label = new Date(now).toLocaleTimeString();
 	    const lastLabel = chart.data.labels[chart.data.labels.length - 1];
 	    if (lastLabel !== label) {
 	      chart.data.labels.push(label);
 	      chart.data.labels.shift();
 	      chart.data.datasets[0].data.push(price);
 	      chart.data.datasets[0].data.shift();
-	      chart.update("none"); // bez animacji
+	      chart.update("none");
 	    }
 	  }
 	
-	  const current = price;
+	  const current = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
 	  const prev = chart.data.datasets[0].data[0];
 	  const owned = portfolio[activeCurrency] || 0;
 	  const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
@@ -219,6 +229,7 @@
         localStorage.clear(); location.reload(); return;
       }
       if (amount === 666) hellMode = true;
+      if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");
       const price = getPrice(activeCurrency, Date.now());
       const cost = amount * price;
       if (!hellMode && cost > balance) return alert("Za mało środków");
@@ -231,13 +242,44 @@
 
     function sell() {
       const amount = parseFloat(document.getElementById("amount").value);
+      if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");
       const owned = portfolio[activeCurrency] || 0;
-      const price = getPrice(activeCurrency, Date.now());
       if (amount > owned) return alert("Za mało jednostek");
+      const price = getPrice(activeCurrency, Date.now());
       portfolio[activeCurrency] -= amount;
       balance += amount * price;
       save();
       sendToWebhook("Sprzedaż", activeCurrency, amount, price);
+      updateChart();
+    }
+
+    function buyAll() {
+      username = document.getElementById("username").value.trim() || "Anon";
+      localStorage.setItem("username", username);
+      const price = getPrice(activeCurrency, Date.now());
+      if (price <= 0) return alert("Błędny kurs");
+      if (hellMode) {
+        alert("Tryb piekielny - kupujesz nieskończoną ilość");
+        portfolio[activeCurrency] = Infinity;
+      } else {
+        const maxAmount = Math.floor(balance / price * 100) / 100; // zaokrąglenie do 2 miejsc
+        if (maxAmount <= 0) return alert("Za mało środków");
+        portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + maxAmount;
+        balance -= maxAmount * price;
+      }
+      save();
+      sendToWebhook("Kupno wszystkie", activeCurrency, portfolio[activeCurrency], price);
+      updateChart();
+    }
+
+    function sellAll() {
+      const owned = portfolio[activeCurrency] || 0;
+      if (owned <= 0) return alert("Nie masz żadnych jednostek do sprzedaży");
+      const price = getPrice(activeCurrency, Date.now());
+      portfolio[activeCurrency] = 0;
+      balance += owned * price;
+      save();
+      sendToWebhook("Sprzedaż wszystkie", activeCurrency, owned, price);
       updateChart();
     }
 
