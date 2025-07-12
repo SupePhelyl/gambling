@@ -203,7 +203,9 @@
       tabBar.innerHTML = "";
       currencies.forEach(c => {
         const el = document.createElement("div");
-        el.textContent = c;
+        let own = portfolio[c]
+        if (own === undefined) own = 0;
+        el.textContent = c + " " + own;
         el.className = "tab" + (c === activeCurrency ? " active" : "");
         el.onclick = () => {
           activeCurrency = c;
