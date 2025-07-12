@@ -230,7 +230,6 @@
       if (amount === 192168) {
         localStorage.clear(); location.reload(); return;
       }
-      if (amount === 666) hellMode = true;
       if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");
       const price = getPrice(activeCurrency, Date.now());
       const cost = amount * price;
