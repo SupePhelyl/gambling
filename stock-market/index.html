@@ -124,7 +124,7 @@
         case "ALFA":
           return 50 + Math.sin(t / 13333) * 8 + chaos * 5;
         case "BETA":
-          return 30 + Math.cos(t / 7777) * 12 + Math.sin(t / 2222 * chaos + chaos * 3) * Math.tan(day/chaos*3);
+          return 30 + Math.abs(Math.cos(t / 7777) * 12 + Math.sin(t / 2222 * chaos + chaos * 3) * Math.tan(day/chaos*3));
         case "GAMMA":
           return 80 + (Math.pow(Math.sin(t / 10000), 3) + chaos) * 15;
         case "DELTA":
