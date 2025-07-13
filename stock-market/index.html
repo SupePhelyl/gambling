@@ -159,66 +159,74 @@
       }  
     }  
   
-    function updateChart() {  
-      const now = roundTime5s(Date.now());  
-  
-      if (chart && chart.data.datasets[0].label !== activeCurrency) {  
-        chart.destroy();  
-        chart = null;  
-      }  
-  
-      if (!chart) {  
-        const timestamps = getTimestamps();  
-        const data = timestamps.map(t => getPrice(activeCurrency, t));  
-        const labels = timestamps.map(t => new Date(t).toLocaleTimeString());  
-  
-        chart = new Chart(ctx, {  
-          type: "line",  
-          data: {  
-            labels: labels,  
-            datasets: [{  
-              label: activeCurrency,  
-              data: data,  
-              borderColor: "#ffd700",  
-              borderWidth: 2,  
-              fill: false,  
-              tension: 0.3  
-            }]  
-          },  
-          options: {  
-            animation: false,  
-            scales: { y: { beginAtZero: false }},  
-            plugins: { legend: { display: false } }  
-          }  
-        });  
-      } else {  
-        const price = getPrice(activeCurrency, now);  
-        const label = new Date(now).toLocaleTimeString();  
-        const lastLabel = chart.data.labels[chart.data.labels.length - 1];  
-        if (lastLabel !== label) {  
-          chart.data.labels.push(label);  
-          chart.data.labels.shift();  
-          chart.data.datasets[0].data.push(price);  
-          chart.data.datasets[0].data.shift();  
-          chart.update("none");  
-        }  
-      }  
-  
-      const current = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];  
-      const prev = chart.data.datasets[0].data[0];  
-      const owned = portfolio[activeCurrency] || 0;  
-      const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);  
-      const change = (((current - prev) / prev) * 100).toFixed(2);  
-  
-      info.innerHTML = `  
-        💱 Kurs: $${current.toFixed(2)}<br/>  
-        📈 Zmiana 5m: ${change}%<br/>  
-        🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>  
-        💰 Możesz kupić: ${maxBuy} jednostek<br/>  
-        🏦 Saldo: $${balance.toFixed(2)}<br/>  
-        💲 Wartość: $${(owned*current).toFixed(2)}  
-      `;  
-    }  
+function updateChart() {
+  const now = roundTime5s(Date.now());
+
+  if (chart && chart.data.datasets[0].label !== activeCurrency) {
+    chart.destroy();
+    chart = null;
+  }
+
+  if (!chart) {
+    const timestamps = getTimestamps();
+    const data = timestamps.map(t => getPrice(activeCurrency, t));
+    const labels = timestamps.map(t => new Date(t).toLocaleTimeString());
+
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: activeCurrency,
+          data: data,
+          borderColor: "#ffd700",
+          borderWidth: 2,
+          fill: false,
+          tension: 0.3
+        }]
+      },
+      options: {
+        animation: false,
+        scales: { y: { beginAtZero: false }},
+        plugins: { legend: { display: false } }
+      }
+    });
+  } else {
+    const price = getPrice(activeCurrency, now);
+    const label = new Date(now).toLocaleTimeString();
+    const lastLabel = chart.data.labels[chart.data.labels.length - 1];
+    if (lastLabel !== label) {
+      chart.data.labels.push(label);
+      chart.data.labels.shift();
+      chart.data.datasets[0].data.push(price);
+      chart.data.datasets[0].data.shift();
+      chart.update("none");
+    }
+  }
+
+  const current = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
+  const prev = chart.data.datasets[0].data[0];
+  const owned = portfolio[activeCurrency] || 0;
+  const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
+  const change = (((current - prev) / prev) * 100).toFixed(2);
+  const avgBuy = portfolio[`${activeCurrency}_avg`] || 0;
+
+  let profitChange = "brak danych";
+  if (owned > 0 && avgBuy > 0 && avgBuy !== Infinity) {
+    const diff = ((current - avgBuy) / avgBuy) * 100;
+    profitChange = `${diff.toFixed(2)}%`;
+  }
+
+  info.innerHTML = `
+    💱 Kurs: $${current.toFixed(2)}<br/>
+    📈 Zmiana 5m: ${change}%<br/>
+    🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>
+    💰 Możesz kupić: ${maxBuy} jednostek<br/>
+    🏦 Saldo: $${balance.toFixed(2)}<br/>
+    💲 Wartość: $${(owned * current).toFixed(2)}<br/>
+    📊 Zysk/strata od kupna: ${profitChange}
+  `;
+}
   
     function buildTabs() {  
       tabBar.innerHTML = "";  
@@ -237,24 +245,31 @@
       });  
     }  
   
-    function buy() {  
-        
-      username = document.getElementById("username").value.trim() || "Anon";  
-      localStorage.setItem("username", username);  
-      const amount = parseFloat(document.getElementById("amount").value);  
-      if (amount === 192168) {  
-        localStorage.clear(); location.reload(); return;  
-      }  
-      if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");  
-      const price = getPrice(activeCurrency, Date.now());  
-      const cost = amount * price;  
-      if (!hellMode && cost > balance) return alert("Za mało środków");  
-      portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + amount;  
-      if (!hellMode) balance -= cost;  
-      save();  
-      saveScoreToFirebase(username, balance);  
-      showLeaderboard();  
-      updateChart();  
+    function buy() {
+      username = document.getElementById("username").value.trim() || "Anon";
+      localStorage.setItem("username", username);
+      const amount = parseFloat(document.getElementById("amount").value);
+      if (amount === 192168) {
+        localStorage.clear(); location.reload(); return;
+      }
+      if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");
+      const price = getPrice(activeCurrency, Date.now());
+      const cost = amount * price;
+      if (!hellMode && cost > balance) return alert("Za mało środków");
+
+      const prevAmount = portfolio[activeCurrency] || 0;
+      const prevValue = (portfolio[`${activeCurrency}_avg`] || 0) * prevAmount;
+      const totalValue = prevValue + cost;
+      const newAmount = prevAmount + amount;
+
+      portfolio[activeCurrency] = newAmount;
+      portfolio[`${activeCurrency}_avg`] = totalValue / newAmount;
+
+      if (!hellMode) balance -= cost;
+      save();
+      saveScoreToFirebase(username, balance);
+      showLeaderboard();
+      updateChart();
     }  
   
     function sell() {  
@@ -271,38 +286,47 @@
       updateChart();  
     }  
   
-    function buyAll() {  
-      username = document.getElementById("username").value.trim() || "Anon";  
-      localStorage.setItem("username", username);  
-      const price = getPrice(activeCurrency, Date.now());  
-      if (price <= 0) return alert("Błędny kurs");  
-      if (hellMode) {  
-        alert("Tryb piekielny - kupujesz nieskończoną ilość");  
-        portfolio[activeCurrency] = Infinity;  
-      } else {  
-        const maxAmount = Math.floor(balance / price * 100) / 100;  
-        if (maxAmount <= 0) return alert("Za mało środków");  
-        portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + maxAmount;  
-        balance -= maxAmount * price;  
-      }  
-      save();  
-      saveScoreToFirebase(username, balance);  
-      showLeaderboard();  
-      updateChart();  
-    }  
+function buyAll() {
+  username = document.getElementById("username").value.trim() || "Anon";
+  localStorage.setItem("username", username);
+  const price = getPrice(activeCurrency, Date.now());
+  if (price <= 0) return alert("Błędny kurs");
+
+  if (hellMode) {
+    alert("Tryb piekielny - kupujesz nieskończoną ilość");
+    portfolio[activeCurrency] = Infinity;
+  } else {
+    const maxAmount = Math.floor(balance / price * 100) / 100;
+    if (maxAmount <= 0) return alert("Za mało środków");
+
+    const prevAmount = portfolio[activeCurrency] || 0;
+    const prevValue = (portfolio[`${activeCurrency}_avg`] || 0) * prevAmount;
+    const totalValue = prevValue + (maxAmount * price);
+    const newAmount = prevAmount + maxAmount;
+
+    portfolio[activeCurrency] = newAmount;
+    portfolio[`${activeCurrency}_avg`] = totalValue / newAmount;
+    balance -= maxAmount * price;
+  }
+
+  save();
+  saveScoreToFirebase(username, balance);
+  showLeaderboard();
+  updateChart();
+}
   
-    function sellAll() {  
-      const owned = portfolio[activeCurrency] || 0;  
-      if (owned <= 0) return alert("Nie masz żadnych jednostek do sprzedaży");  
-      const price = getPrice(activeCurrency, Date.now());  
-      portfolio[activeCurrency] = 0;  
-      balance += owned * price;  
-      save();  
-      saveScoreToFirebase(username, balance);  
-      showLeaderboard();  
-      updateChart();  
-    }  
-  
+function sellAll() {
+  const owned = portfolio[activeCurrency] || 0;
+  if (owned <= 0) return alert("Nie masz żadnych jednostek do sprzedaży");
+  const price = getPrice(activeCurrency, Date.now());
+  portfolio[activeCurrency] = 0;
+  delete portfolio[`${activeCurrency}_avg`];
+  balance += owned * price;
+  save();
+  saveScoreToFirebase(username, balance);
+  showLeaderboard();
+  updateChart();
+}
     function save() {  
       localStorage.setItem("balance", balance);  
       localStorage.setItem("portfolio", JSON.stringify(portfolio));  
