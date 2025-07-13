@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hazardowa Strona Główna</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: #f0f0f0;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    h1 {
+      font-size: 3em;
+      color: #ffd700;
+      margin-bottom: 40px;
+    }
+
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .menu-button {
+      padding: 20px 40px;
+      font-size: 24px;
+      background-color: #ffd700;
+      color: #000;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: transform 0.2s ease, background-color 0.3s ease;
+      width: 280px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+    }
+
+    .menu-button:hover {
+      background-color: #e6c200;
+      transform: scale(1.05);
+    }
+
+    .footer {
+      margin-top: 80px;
+      font-size: 14px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎲 Witamy w Hazard Hub 🎲</h1>
+  
+  <div class="button-container">
+    <button class="menu-button" onclick="location.href='/slot-machine'">🎰 Slot Machine</button>
+    <button class="menu-button" onclick="location.href='/stock-market'">📈 Stock Market</button>
+  </div>
+
+  <div class="footer">
+    Hazard tylko dla osób pełnoletnich (18+). Graj odpowiedzialnie.
+  </div>
+</body>
+</html>
