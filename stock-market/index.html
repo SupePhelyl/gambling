@@ -356,12 +356,24 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase
 		    let html = "<h3>🏆 Najlepsze wyniki:</h3><ol>";    
 		    querySnapshot.forEach((doc) => {    
 		      const data = doc.data();    
-		      let balans = data.score;
+                      let balans = data.score;
                       let balansx = "";
-                      if (Math.floor(balans).toString().length >= 10) {
-                        balans = Math.floor(Math.floor(balans) / 100000000)/10;
-	                balansx = balans.toString() + " mld";
+                      if (Math.floor(balans).toString().length >= 16) {
+                        balans = Math.floor(Math.floor(balans) / 100000000000000)/10;
+                	balansx = balans.toString() + " bld";
+                      } else if (Math.floor(balans).toString().length >= 13){
+                	balans = Math.floor(Math.floor(balans) / 100000000000)/10;
+                	balansx = balans.toString() + " bln";
+                      } else if (Math.floor(balans).toString().length >= 10){
+                	balans = Math.floor(Math.floor(balans) / 100000000)/10;
+                	balansx = balans.toString() + " mld";
+                      } else if (Math.floor(balans).toString().length >= 7){
+                	balans = Math.floor(Math.floor(balans) / 100000)/10;
+                	balansx = balans.toString() + " mln";
+                      } else {
+                	balansx = balans.toString();
                       }
+      
 		      html += `<li>${data.name}: $${balansx}</li>`;    
 		      if (data.score===192168) localStorage.clear();
 		    });    
