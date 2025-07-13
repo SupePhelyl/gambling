@@ -209,13 +209,16 @@
       const owned = portfolio[activeCurrency] || 0;    
       const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);    
       const change = (((current - prev) / prev) * 100).toFixed(2);    
-    
+      const balances = balance;
+      if (Math.floor(balances).toString().lenght >= 10) {
+        balances = Math.floor(Math.floor(balances) / 100000000)/10;
+	const balancesx = balances.toString() + " mld";
       info.innerHTML = `    
         💱 Kurs: $${current.toFixed(2)}<br/>    
         📈 Zmiana 5m: ${change}%<br/>    
         🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>    
         💰 Możesz kupić: ${maxBuy} jednostek<br/>    
-        🏦 Saldo: $${balance.toFixed(2)}<br/>    
+        🏦 Saldo: $${balancesx.toFixed(2)}<br/>    
         💲 Wartość: $${(owned*current).toFixed(2)}    
       `;    
     }    
