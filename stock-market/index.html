@@ -120,7 +120,8 @@
     const info = document.getElementById("info");    
     
     document.getElementById("username").value = username;    
-    
+    saveScoreToFirebase(username, balance);    
+    showLeaderboard();    
     function roundTime5s(ts = Date.now()) {    
       return Math.floor(ts / 5000) * 5000;    
     }    
