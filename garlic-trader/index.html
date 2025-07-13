@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Garlic Trader</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #f5f5f5;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+    .tab {
+      background: #333;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background: #ffd700;
+      color: #000;
+    }
+    .content {
+      background: #222;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+    }
+    .hidden {
+      display: none;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #ffd700;
+      color: #000;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Główne zakładki -->
+  <div class="tabs" id="mainTabs">
+    <div class="tab active" data-tab="market">Market</div>
+    <div class="tab" data-tab="farm">Farma</div>
+    <div class="tab" data-tab="toplist">Top listy</div>
+  </div>
+
+  <div class="content">
+    <!-- Zakładka Market -->
+    <div id="market" class="tab-content">
+      <p>Wybierz operację na czosnku:</p>
+      <input id="market-amount" placeholder="Ilość" type="number" min="0" step="any" />
+      <button onclick="marketBuy()">Kupię</button>
+      <button onclick="marketSell()">Sprzedam</button>
+    </div>
+
+    <!-- Zakładka Farma -->
+    <div id="farm" class="tab-content hidden">
+      <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
+    </div>
+
+    <!-- Zakładka Top listy -->
+    <div id="toplist" class="tab-content hidden">
+      <p>⚔️ Najlepsi gracze Garlic Trader:</p>
+      <div id="leaderboard">Ładowanie Top listy...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Obsługa głównych zakładek
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        contents.forEach(c => c.classList.add('hidden'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    // Przykładowe funkcje market
+    function marketBuy() {
+      const amt = parseFloat(document.getElementById('market-amount').value);
+      if (isNaN(amt) || amt <= 0) return alert('Podaj poprawną ilość');
+      alert(`Kupiłeś ${amt} czosnku!`);
+      // tu dodaj logikę (Firebase, lokalStorage itd.)
+    }
+    function marketSell() {
+      const amt = parseFloat(document.getElementById('market-amount').value);
+      if (isNaN(amt) || amt <= 0) return alert('Podaj poprawną ilość');
+      alert(`Sprzedałeś ${amt} czosnku!`);
+      // tu dodaj aktualizację stanu
+    }
+
+    // Firebase (utrzymano z poprzedniego szkicu)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const encodedConfig = {
+      apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",
+      authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",
+      projectId: "Z2llbGRhLTIwMTcy",
+      storageBucket: "Z2llbGRhLTIwMTcyLmFwcHNwb3QuY29t",
+      messagingSenderId: "OTg1NDU1NzcwODA1",
+      appId: "MTo5ODU0NTU3NzA4MDU6d2ViOmE4MGFhZjUzNmE2YTVkMDY0YzUyZmM=",
+      measurementId: "Ry1ZMFlFOUxZUjQ5"
+    };
+    const firebaseConfig = {};
+    for (const key in encodedConfig) {
+      firebaseConfig[key] = atob(encodedConfig[key]);
+    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadTopList() {
+      const el = document.getElementById('garlic-leaderboard');
+      el.textContent = 'Ładowanie...';
+      try {
+        const q = query(collection(db, 'garlic-leaderboard'), orderBy('score', 'desc'), limit(10));
+        const docs = await getDocs(q);
+        if (docs.empty) {
+          el.textContent = 'Brak danych w Top listach.';
+          return;
+        }
+        const list = Array.from(docs).map(doc => {
+          const d = doc.data();
+          return `${d.name}: ${d.score.toFixed(2)}`;
+        });
+        el.innerHTML = '<ol>' + list.map(i => `<li>${i}</li>`).join('') + '</ol>';
+      } catch(e) {
+        el.textContent = 'Błąd ładowania Top list.';
+        console.error(e);
+      }
+    }
+
+    // Ładuj Top listy przy starcie
+    loadTopList();
+  </script>
+
+</body>
+</html>
