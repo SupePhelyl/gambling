@@ -120,8 +120,7 @@
     const info = document.getElementById("info");    
     
     document.getElementById("username").value = username;    
-    saveScoreToFirebase(username, balance);    
-    showLeaderboard();    
+    
     function roundTime5s(ts = Date.now()) {    
       return Math.floor(ts / 5000) * 5000;    
     }    
@@ -358,7 +357,8 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase
     
     setInterval(updateChart, 5000);    
     buildTabs();    
-    updateChart();    
+    updateChart();   
+    saveScoreToFirebase(username, balance);    
     showLeaderboard();    
   </script>    
 </body>    
