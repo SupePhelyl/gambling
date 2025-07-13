@@ -211,9 +211,18 @@
       const change = (((current - prev) / prev) * 100).toFixed(2);    
       let balances = balance;
       let balancesx = "";
-      if (Math.floor(balances).toString().length >= 10) {
-        balances = Math.floor(Math.floor(balances) / 100000000)/10;
+      if (Math.floor(balances).toString().length >= 16) {
+        balances = Math.floor(Math.floor(balances) / 100000000000000)/10;
+	balancesx = balances.toString() + " bld";
+      } else if (Math.floor(balances).toString().length >= 13){
+	balances = Math.floor(Math.floor(balances) / 100000000000)/10;
+	balancesx = balances.toString() + " bln";
+      } else if (Math.floor(balances).toString().length >= 10){
+	balances = Math.floor(Math.floor(balances) / 100000000)/10;
 	balancesx = balances.toString() + " mld";
+      } else if (Math.floor(balances).toString().length >= 7){
+	balances = Math.floor(Math.floor(balances) / 100000)/10;
+	balancesx = balances.toString() + " mln";
       }
       info.innerHTML = `    
         💱 Kurs: $${current.toFixed(2)}<br/>    
