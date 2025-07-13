@@ -312,9 +312,9 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase
     
 	async function saveScoreToFirebase(username, score) {    
 	  try {    
-	    const docRef = doc(db, "leaderboard", username);    
+	    const docRef = doc(db, "leaderboard", username.toString());    
 	    await setDoc(docRef, {    
-	      name: username,    
+	      name: username.toString(),    
 	      score: score,    
 	      timestamp: new Date()    
 	    });    
