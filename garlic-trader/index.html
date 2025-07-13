@@ -12,19 +12,19 @@
       margin: 0;
       padding: 20px;
     }
-    .tabs {
+    .tabs, .subtabs {
       display: flex;
       overflow-x: auto;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
-    .tab {
+    .tab, .subtab {
       background: #333;
       padding: 10px 20px;
       cursor: pointer;
       border-radius: 8px 8px 0 0;
       margin-right: 5px;
     }
-    .tab.active {
+    .tab.active, .subtab.active {
       background: #ffd700;
       color: #000;
     }
@@ -35,18 +35,6 @@
     }
     .hidden {
       display: none;
-    }
-    input, button {
-      padding: 10px;
-      font-size: 16px;
-      margin: 5px;
-      border-radius: 5px;
-      border: none;
-    }
-    button {
-      background: #ffd700;
-      color: #000;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -62,10 +50,18 @@
   <div class="content">
     <!-- Zakładka Market -->
     <div id="market" class="tab-content">
-      <p>Wybierz operację na czosnku:</p>
-      <input id="market-amount" placeholder="Ilość" type="number" min="0" step="any" />
-      <button onclick="marketBuy()">Kupię</button>
-      <button onclick="marketSell()">Sprzedam</button>
+      <!-- Zakładki wewnętrzne Marketu -->
+      <div class="subtabs">
+        <div class="subtab active" data-subtab="buy">Kupię</div>
+        <div class="subtab" data-subtab="sell">Sprzedam</div>
+      </div>
+      <!-- Treści zakładek Kupię / Sprzedam -->
+      <div id="buy" class="subtab-content">
+        <p>🛒 Kup czosnek na rynku!</p>
+      </div>
+      <div id="sell" class="subtab-content hidden">
+        <p>💰 Sprzedaj swój czosnek innym graczom!</p>
+      </div>
     </div>
 
     <!-- Zakładka Farma -->
@@ -93,21 +89,19 @@
       });
     });
 
-    // Przykładowe funkcje market
-    function marketBuy() {
-      const amt = parseFloat(document.getElementById('market-amount').value);
-      if (isNaN(amt) || amt <= 0) return alert('Podaj poprawną ilość');
-      alert(`Kupiłeś ${amt} czosnku!`);
-      // tu dodaj logikę (Firebase, lokalStorage itd.)
-    }
-    function marketSell() {
-      const amt = parseFloat(document.getElementById('market-amount').value);
-      if (isNaN(amt) || amt <= 0) return alert('Podaj poprawną ilość');
-      alert(`Sprzedałeś ${amt} czosnku!`);
-      // tu dodaj aktualizację stanu
-    }
+    // Obsługa podzakładek Market (Kupię / Sprzedam)
+    const subtabs = document.querySelectorAll('.subtab');
+    const subcontents = document.querySelectorAll('.subtab-content');
+    subtabs.forEach(subtab => {
+      subtab.addEventListener('click', () => {
+        subtabs.forEach(st => st.classList.remove('active'));
+        subcontents.forEach(sc => sc.classList.add('hidden'));
+        subtab.classList.add('active');
+        document.getElementById(subtab.dataset.subtab).classList.remove('hidden');
+      });
+    });
 
-    // Firebase (utrzymano z poprzedniego szkicu)
+    // Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -128,7 +122,7 @@
     const db = getFirestore(app);
 
     async function loadTopList() {
-      const el = document.getElementById('garlic-leaderboard');
+      const el = document.getElementById('leaderboard');
       el.textContent = 'Ładowanie...';
       try {
         const q = query(collection(db, 'garlic-leaderboard'), orderBy('score', 'desc'), limit(10));
@@ -148,9 +142,7 @@
       }
     }
 
-    // Ładuj Top listy przy starcie
     loadTopList();
   </script>
-
 </body>
 </html>
