@@ -223,6 +223,8 @@
       } else if (Math.floor(balances).toString().length >= 7){
 	balances = Math.floor(Math.floor(balances) / 100000)/10;
 	balancesx = balances.toString() + " mln";
+      } else {
+	balancesx = balances.toString();
       }
       info.innerHTML = `    
         💱 Kurs: $${current.toFixed(2)}<br/>    
