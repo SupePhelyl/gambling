@@ -52,10 +52,6 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    .disabled {
-      pointer-events: none;
-      opacity: 0.4;
-    }
   </style>
 </head>
 <body>
@@ -68,8 +64,8 @@
       <button class="button hidden" id="logout-btn">Wyloguj się</button>
     </div>
   </div>  <h1>Garlic Trader🧄</h1>  <div class="tabs" id="mainTabs">
-    <div class="tab disabled" data-tab="market">Market</div>
-    <div class="tab disabled" data-tab="farm">Farma</div>
+    <div class="tab" data-tab="market">Market</div>
+    <div class="tab" data-tab="farm">Farma</div>
     <div class="tab active" data-tab="toplist">Top listy</div>
   </div>  <div class="content">
     <div id="market" class="tab-content hidden">
@@ -99,14 +95,18 @@
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCo4E88eJrumSph1gyizPxMG2nn2YyMVx8",
-      authDomain: "gielda-20172.firebaseapp.com",
-      projectId: "gielda-20172",
-      storageBucket: "gielda-20172.appspot.com",
-      messagingSenderId: "985455770805",
-      appId: "1:985455770805:web:a80aaf536a6a5d064c52fc",
+    const encodedConfig = {
+      apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",
+      authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",
+      projectId: "Z2llbGRhLTIwMTcy",
+      storageBucket: "Z2llbGRhLTIwMTcyLmFwcHNwb3QuY29t",
+      messagingSenderId: "OTg1NDU1NzcwODA1",
+      appId: "MTo5ODU0NTU3NzA4MDU6d2ViOmE4MGFhZjUzNmE2YTVkMDY0YzUyZmM="
     };
+    const firebaseConfig = {};
+    for (const key in encodedConfig) {
+      firebaseConfig[key] = atob(encodedConfig[key]);
+    }
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -116,7 +116,6 @@
     const logoutBtn = document.getElementById("logout-btn");
     const garlicCount = document.getElementById("garlic-count");
     const moneyCount = document.getElementById("money-count");
-    const tabs = document.querySelectorAll('.tab');
 
     let currentUser = null;
 
@@ -130,46 +129,26 @@
     };
 
     onAuthStateChanged(auth, async user => {
+      const marketTab = document.querySelector('[data-tab="market"]');
+      const farmTab = document.querySelector('[data-tab="farm"]');
       if (user) {
         currentUser = user;
         loginBtn.classList.add("hidden");
         logoutBtn.classList.remove("hidden");
+        marketTab.classList.remove("hidden");
+        farmTab.classList.remove("hidden");
         await loadOrCreatePlayer(user);
-        enableRestrictedTabs();
       } else {
         currentUser = null;
         loginBtn.classList.remove("hidden");
         logoutBtn.classList.add("hidden");
         garlicCount.textContent = "-";
         moneyCount.textContent = "-";
-        disableRestrictedTabs();
-        switchToToplist();
+        marketTab.classList.add("hidden");
+        farmTab.classList.add("hidden");
+        document.querySelector('[data-tab="toplist"]').click();
       }
     });
-
-    function enableRestrictedTabs() {
-      tabs.forEach(tab => {
-        if (tab.dataset.tab === "market" || tab.dataset.tab === "farm") {
-          tab.classList.remove("disabled");
-        }
-      });
-    }
-
-    function disableRestrictedTabs() {
-      tabs.forEach(tab => {
-        if (tab.dataset.tab === "market" || tab.dataset.tab === "farm") {
-          tab.classList.add("disabled");
-        }
-      });
-    }
-
-    function switchToToplist() {
-      tabs.forEach(tab => tab.classList.remove("active"));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-      const toplistTab = [...tabs].find(t => t.dataset.tab === 'toplist');
-      toplistTab.classList.add("active");
-      document.getElementById('toplist').classList.remove("hidden");
-    }
 
     async function loadOrCreatePlayer(user) {
       const ref = doc(db, "garlic-leaderboard", user.uid);
@@ -210,7 +189,7 @@
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        if (tab.classList.contains('disabled')) return;
+        if ((tab.dataset.tab === 'market' || tab.dataset.tab === 'farm') && !currentUser) return;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         tab.classList.add('active');
