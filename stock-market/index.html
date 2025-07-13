@@ -209,8 +209,8 @@
       const owned = portfolio[activeCurrency] || 0;    
       const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);    
       const change = (((current - prev) / prev) * 100).toFixed(2);    
-      const balances = balance;
-      if (Math.floor(balances).toString().lenght >= 10) {
+      let balances = balance;
+      if (Math.floor(balances).toString().length >= 10) {
         balances = Math.floor(Math.floor(balances) / 100000000)/10;
 	const balancesx = balances.toString() + " mld";
       info.innerHTML = `    
