@@ -36,28 +36,41 @@
     .hidden {
       display: none;
     }
+    button {
+      padding: 10px 20px;
+      background: #ffd700;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px 0;
+    }
   </style>
 </head>
 <body>
-  <h1>
-    Garlic Trader🧄
-  </h1>
+  <h1>Garlic Trader🧄</h1>
+
+  <!-- Autoryzacja -->
+  <div id="auth-section">
+    <button id="loginBtn">Zaloguj przez Google</button>
+    <button id="logoutBtn" style="display:none;">Wyloguj</button>
+    <p id="user-info">Nie jesteś zalogowany.</p>
+  </div>
+
   <!-- Główne zakładki -->
   <div class="tabs" id="mainTabs">
-    <div class="tab active" data-tab="market">Market</div>
-    <div class="tab" data-tab="farm">Farma</div>
-    <div class="tab" data-tab="toplist">Top listy</div>
+    <div class="tab" data-tab="market" style="display: none;">Market</div>
+    <div class="tab" data-tab="farm" style="display: none;">Farma</div>
+    <div class="tab active" data-tab="toplist">Top listy</div>
   </div>
 
   <div class="content">
-    <!-- Zakładka Market -->
-    <div id="market" class="tab-content">
-      <!-- Zakładki wewnętrzne Marketu -->
+    <!-- Market -->
+    <div id="market" class="tab-content hidden">
       <div class="subtabs">
         <div class="subtab active" data-subtab="buy">Kupię</div>
         <div class="subtab" data-subtab="sell">Sprzedam</div>
       </div>
-      <!-- Treści zakładek Kupię / Sprzedam -->
       <div id="buy" class="subtab-content">
         <p>🛒 Kup czosnek na rynku!</p>
       </div>
@@ -66,47 +79,24 @@
       </div>
     </div>
 
-    <!-- Zakładka Farma -->
+    <!-- Farma -->
     <div id="farm" class="tab-content hidden">
-      <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
+      <p>🌱 Tu możesz zarządzać swoją farmą czosnku.</p>
     </div>
 
-    <!-- Zakładka Top listy -->
-    <div id="toplist" class="tab-content hidden">
+    <!-- Top listy -->
+    <div id="toplist" class="tab-content">
       <p>⚔️ Najlepsi gracze Garlic Trader:</p>
       <div id="leaderboard">Ładowanie Top listy...</div>
     </div>
   </div>
 
   <script type="module">
-    // Obsługa głównych zakładek
-    const tabs = document.querySelectorAll('.tab');
-    const contents = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        contents.forEach(c => c.classList.add('hidden'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.remove('hidden');
-      });
-    });
-
-    // Obsługa podzakładek Market (Kupię / Sprzedam)
-    const subtabs = document.querySelectorAll('.subtab');
-    const subcontents = document.querySelectorAll('.subtab-content');
-    subtabs.forEach(subtab => {
-      subtab.addEventListener('click', () => {
-        subtabs.forEach(st => st.classList.remove('active'));
-        subcontents.forEach(sc => sc.classList.add('hidden'));
-        subtab.classList.add('active');
-        document.getElementById(subtab.dataset.subtab).classList.remove('hidden');
-      });
-    });
-
-    // Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
+    // Firebase config (zakodowany → dekodowany base64)
     const encodedConfig = {
       apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",
       authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",
@@ -120,9 +110,84 @@
     for (const key in encodedConfig) {
       firebaseConfig[key] = atob(encodedConfig[key]);
     }
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
+    // Logowanie
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("user-info");
+
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Błąd logowania: " + e.message);
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth);
+    });
+
+    // Obsługa zakładek głównych
+    const tabs = document.querySelectorAll(".tab");
+    const contents = document.querySelectorAll(".tab-content");
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        tabs.forEach(t => t.classList.remove("active"));
+        contents.forEach(c => c.classList.add("hidden"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.tab).classList.remove("hidden");
+      });
+    });
+
+    // Obsługa subzakładek (market)
+    const subtabs = document.querySelectorAll(".subtab");
+    const subcontents = document.querySelectorAll(".subtab-content");
+
+    subtabs.forEach(subtab => {
+      subtab.addEventListener("click", () => {
+        subtabs.forEach(st => st.classList.remove("active"));
+        subcontents.forEach(sc => sc.classList.add("hidden"));
+        subtab.classList.add("active");
+        document.getElementById(subtab.dataset.subtab).classList.remove("hidden");
+      });
+    });
+
+    // Obsługa stanu logowania
+    onAuthStateChanged(auth, (user) => {
+      const marketTab = document.querySelector('[data-tab="market"]');
+      const farmTab = document.querySelector('[data-tab="farm"]');
+      if (user) {
+        userInfo.textContent = `Zalogowany jako: ${user.displayName}`;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        marketTab.style.display = "";
+        farmTab.style.display = "";
+      } else {
+        userInfo.textContent = "Nie jesteś zalogowany.";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        marketTab.style.display = "none";
+        farmTab.style.display = "none";
+
+        // Jeśli użytkownik był na niedozwolonej zakładce, przełącz go na Top listy
+        if (!document.querySelector('[data-tab="toplist"]').classList.contains('active')) {
+          tabs.forEach(t => t.classList.remove('active'));
+          contents.forEach(c => c.classList.add('hidden'));
+          const toplistTab = document.querySelector('[data-tab="toplist"]');
+          toplistTab.classList.add('active');
+          document.getElementById("toplist").classList.remove("hidden");
+        }
+      }
+    });
+
+    // Ładowanie Top listy
     async function loadTopList() {
       const el = document.getElementById('leaderboard');
       el.textContent = 'Ładowanie...';
