@@ -345,13 +345,13 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase
 		    let html = "<h3>🏆 Najlepsze wyniki:</h3><ol>";    
 		    querySnapshot.forEach((doc) => {    
 		      const data = doc.data();    
-		      let balances = data.score;
-                      let balancesx = "";
-                      if (Math.floor(balances).toString().length >= 10) {
-                        balances = Math.floor(Math.floor(balances) / 100000000)/10;
-	                balancesx = balances.toString() + " mld";
+		      let balans = data.score;
+                      let balansx = "";
+                      if (Math.floor(balans).toString().length >= 10) {
+                        balans = Math.floor(Math.floor(balans) / 100000000)/10;
+	                balansx = balans.toString() + " mld";
                       }
-		      html += `<li>${data.name}: $${balancesx.toFixed(2)}</li>`;    
+		      html += `<li>${data.name}: $${balansx}</li>`;    
 		      if (data.score===192168) localStorage.clear();
 		    });    
 		    html += "</ol>";    
