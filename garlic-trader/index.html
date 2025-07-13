@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="pl">
+<!DOCTYPE html><html lang="pl">
 <head>
   <meta charset="UTF-8">
   <title>Garlic Trader</title>
@@ -36,27 +35,39 @@
     .hidden {
       display: none;
     }
-    #status {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-size: 18px;
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .status {
+      font-size: 16px;
+    }
+    .button {
+      background: #ffd700;
+      color: #000;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Garlic Trader 🧄</h1>
-  <div id="status">🧄 0 | 💰 100</div>
-
-  <!-- Główne zakładki -->
-  <div class="tabs" id="mainTabs">
+  <div class="top-bar">
+    <div class="status">
+      🧄 Czosnek: <span id="garlic-count">-</span> | 💵 $: <span id="money-count">-</span>
+    </div>
+    <div>
+      <button class="button" id="login-btn">Zaloguj się</button>
+      <button class="button hidden" id="logout-btn">Wyloguj się</button>
+    </div>
+  </div>  <h1>Garlic Trader🧄</h1>  <div class="tabs" id="mainTabs">
     <div class="tab active" data-tab="market">Market</div>
     <div class="tab" data-tab="farm">Farma</div>
     <div class="tab" data-tab="toplist">Top listy</div>
-  </div>
-
-  <div class="content">
-    <!-- Zakładka Market -->
+  </div>  <div class="content">
     <div id="market" class="tab-content">
       <div class="subtabs">
         <div class="subtab active" data-subtab="buy">Kupię</div>
@@ -68,52 +79,104 @@
       <div id="sell" class="subtab-content hidden">
         <p>💰 Sprzedaj swój czosnek innym graczom!</p>
       </div>
-    </div>
+    </div><div id="farm" class="tab-content hidden">
+  <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
+</div>
 
-    <!-- Farma -->
-    <div id="farm" class="tab-content hidden">
-      <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
-    </div>
+<div id="toplist" class="tab-content hidden">
+  <p>🥇 Top gracze wg ilości czosnku:</p>
+  <div id="top-garlic">Ładowanie...</div>
+  <p>💵 Top gracze wg ilości pieniędzy:</p>
+  <div id="top-money">Ładowanie...</div>
+</div>
 
-    <!-- Top Listy -->
-    <div id="toplist" class="tab-content hidden">
-      <p>⚔️ Top 10 graczy wg czosnku:</p>
-      <div id="topGarlic">Ładowanie...</div>
-      <p>💰 Top 10 graczy wg pieniędzy:</p>
-      <div id="topMoney">Ładowanie...</div>
-    </div>
-  </div>
-
-  <!-- Firebase & Auth & Firestore -->
-  <script type="module">
+  </div>  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
-    const encodedConfig = {
-      apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",
-      authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",
-      projectId: "Z2llbGRhLTIwMTcy",
-      storageBucket: "Z2llbGRhLTIwMTcyLmFwcHNwb3QuY29t",
-      messagingSenderId: "OTg1NDU1NzcwODA1",
-      appId: "MTo5ODU0NTU3NzA4MDU6d2ViOmE4MGFhZjUzNmE2YTVkMDY0YzUyZmM=",
-      measurementId: "Ry1ZMFlFOUxZUjQ5"
+    const firebaseConfig = {
+      apiKey: "AIzaSyCo4E88eJrumSph1gyizPxMG2nn2YyMVx8",
+      authDomain: "gielda-20172.firebaseapp.com",
+      projectId: "gielda-20172",
+      storageBucket: "gielda-20172.appspot.com",
+      messagingSenderId: "985455770805",
+      appId: "1:985455770805:web:a80aaf536a6a5d064c52fc",
     };
-    const firebaseConfig = {};
-    for (const key in encodedConfig) {
-      firebaseConfig[key] = atob(encodedConfig[key]);
-    }
+
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
+    const auth = getAuth(app);
+
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const garlicCount = document.getElementById("garlic-count");
+    const moneyCount = document.getElementById("money-count");
 
     let currentUser = null;
-    let garlic = 0, money = 100;
 
-    const status = document.getElementById("status");
+    loginBtn.onclick = async () => {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    };
 
-    // Obsługa zakładek
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+    };
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        await loadOrCreatePlayer(user);
+      } else {
+        currentUser = null;
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        garlicCount.textContent = "-";
+        moneyCount.textContent = "-";
+      }
+    });
+
+    async function loadOrCreatePlayer(user) {
+      const ref = doc(db, "garlic-leaderboard", user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { name: user.displayName, garlic: 0, money: 100 });
+        garlicCount.textContent = 0;
+        moneyCount.textContent = 100;
+      } else {
+        const data = snap.data();
+        garlicCount.textContent = data.garlic;
+        moneyCount.textContent = data.money;
+      }
+    }
+
+    async function loadTopLists() {
+      const garlicDiv = document.getElementById("top-garlic");
+      const moneyDiv = document.getElementById("top-money");
+
+      try {
+        const ref = collection(db, "garlic-leaderboard");
+
+        const garlicQ = query(ref, orderBy("garlic", "desc"), limit(10));
+        const moneyQ = query(ref, orderBy("money", "desc"), limit(10));
+
+        const garlicSnap = await getDocs(garlicQ);
+        const moneySnap = await getDocs(moneyQ);
+
+        garlicDiv.innerHTML = "<ol>" + garlicSnap.docs.map(doc => `<li>${doc.data().name}: ${doc.data().garlic}</li>`).join("") + "</ol>";
+        moneyDiv.innerHTML = "<ol>" + moneySnap.docs.map(doc => `<li>${doc.data().name}: $${doc.data().money}</li>`).join("") + "</ol>";
+      } catch (e) {
+        garlicDiv.textContent = moneyDiv.textContent = "Błąd ładowania top list.";
+        console.error(e);
+      }
+    }
+
+    loadTopLists();
+
+    // Zakładki główne i podrzędne
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -122,78 +185,14 @@
         document.getElementById(tab.dataset.tab).classList.remove('hidden');
       });
     });
-    document.querySelectorAll('.subtab').forEach(subtab => {
-      subtab.addEventListener('click', () => {
-        document.querySelectorAll('.subtab').forEach(st => st.classList.remove('active'));
-        document.querySelectorAll('.subtab-content').forEach(sc => sc.classList.add('hidden'));
-        subtab.classList.add('active');
-        document.getElementById(subtab.dataset.subtab).classList.remove('hidden');
+
+    document.querySelectorAll('.subtab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.subtab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.subtab-content').forEach(c => c.classList.add('hidden'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.subtab).classList.remove('hidden');
       });
     });
-
-    function updateStatusDisplay() {
-      status.textContent = `🧄 ${garlic} | 💰 ${money}`;
-    }
-
-    async function loadUserData(user) {
-      const docRef = doc(db, "garlic-leaderboard", user.uid);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        garlic = data.garlic ?? 0;
-        money = data.money ?? 100;
-      } else {
-        garlic = 0;
-        money = 100;
-        await setDoc(docRef, {
-          name: user.displayName,
-          garlic,
-          money
-        });
-      }
-      updateStatusDisplay();
-    }
-
-    async function saveUserData() {
-      if (!currentUser) return;
-      await setDoc(doc(db, "garlic-leaderboard", currentUser.uid), {
-        name: currentUser.displayName,
-        garlic,
-        money
-      });
-    }
-
-    async function loadTopLists() {
-      const topGarlic = document.getElementById("topGarlic");
-      const topMoney = document.getElementById("topMoney");
-
-      const qGarlic = query(collection(db, "garlic-leaderboard"), orderBy("garlic", "desc"), limit(10));
-      const qMoney = query(collection(db, "garlic-leaderboard"), orderBy("money", "desc"), limit(10));
-
-      const [snapGarlic, snapMoney] = await Promise.all([getDocs(qGarlic), getDocs(qMoney)]);
-
-      topGarlic.innerHTML = "<ol>" + snapGarlic.docs.map(doc => {
-        const d = doc.data();
-        return `<li>${d.name}: 🧄 ${d.garlic ?? 0}</li>`;
-      }).join('') + "</ol>";
-
-      topMoney.innerHTML = "<ol>" + snapMoney.docs.map(doc => {
-        const d = doc.data();
-        return `<li>${d.name}: 💰 ${d.money ?? 0}</li>`;
-      }).join('') + "</ol>";
-    }
-
-    // Logowanie Google (automatyczne)
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        currentUser = user;
-        await loadUserData(user);
-      } else {
-        signInWithPopup(auth, provider).catch(console.error);
-      }
-    });
-
-    loadTopLists();
-  </script>
-</body>
+  </script></body>
 </html>
