@@ -36,37 +36,28 @@
     .hidden {
       display: none;
     }
-    button {
-      padding: 10px 20px;
-      background: #ffd700;
-      color: #000;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin: 5px 0;
+    #status {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h1>Garlic Trader🧄</h1>
-
-  <!-- Autoryzacja -->
-  <div id="auth-section">
-    <button id="loginBtn">Zaloguj przez Google</button>
-    <button id="logoutBtn" style="display:none;">Wyloguj</button>
-    <p id="user-info">Nie jesteś zalogowany.</p>
-  </div>
+  <h1>Garlic Trader 🧄</h1>
+  <div id="status">🧄 0 | 💰 100</div>
 
   <!-- Główne zakładki -->
   <div class="tabs" id="mainTabs">
-    <div class="tab" data-tab="market" style="display: none;">Market</div>
-    <div class="tab" data-tab="farm" style="display: none;">Farma</div>
-    <div class="tab active" data-tab="toplist">Top listy</div>
+    <div class="tab active" data-tab="market">Market</div>
+    <div class="tab" data-tab="farm">Farma</div>
+    <div class="tab" data-tab="toplist">Top listy</div>
   </div>
 
   <div class="content">
-    <!-- Market -->
-    <div id="market" class="tab-content hidden">
+    <!-- Zakładka Market -->
+    <div id="market" class="tab-content">
       <div class="subtabs">
         <div class="subtab active" data-subtab="buy">Kupię</div>
         <div class="subtab" data-subtab="sell">Sprzedam</div>
@@ -81,22 +72,24 @@
 
     <!-- Farma -->
     <div id="farm" class="tab-content hidden">
-      <p>🌱 Tu możesz zarządzać swoją farmą czosnku.</p>
+      <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
     </div>
 
-    <!-- Top listy -->
-    <div id="toplist" class="tab-content">
-      <p>⚔️ Najlepsi gracze Garlic Trader:</p>
-      <div id="leaderboard">Ładowanie Top listy...</div>
+    <!-- Top Listy -->
+    <div id="toplist" class="tab-content hidden">
+      <p>⚔️ Top 10 graczy wg czosnku:</p>
+      <div id="topGarlic">Ładowanie...</div>
+      <p>💰 Top 10 graczy wg pieniędzy:</p>
+      <div id="topMoney">Ładowanie...</div>
     </div>
   </div>
 
+  <!-- Firebase & Auth & Firestore -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
-    // Firebase config (zakodowany → dekodowany base64)
     const encodedConfig = {
       apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",
       authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",
@@ -110,106 +103,97 @@
     for (const key in encodedConfig) {
       firebaseConfig[key] = atob(encodedConfig[key]);
     }
-
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    // Logowanie
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const userInfo = document.getElementById("user-info");
+    let currentUser = null;
+    let garlic = 0, money = 100;
 
-    loginBtn.addEventListener("click", async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (e) {
-        alert("Błąd logowania: " + e.message);
-      }
+    const status = document.getElementById("status");
+
+    // Obsługa zakładek
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.remove('hidden');
+      });
     });
-
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth);
-    });
-
-    // Obsługa zakładek głównych
-    const tabs = document.querySelectorAll(".tab");
-    const contents = document.querySelectorAll(".tab-content");
-
-    tabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        tabs.forEach(t => t.classList.remove("active"));
-        contents.forEach(c => c.classList.add("hidden"));
-        tab.classList.add("active");
-        document.getElementById(tab.dataset.tab).classList.remove("hidden");
+    document.querySelectorAll('.subtab').forEach(subtab => {
+      subtab.addEventListener('click', () => {
+        document.querySelectorAll('.subtab').forEach(st => st.classList.remove('active'));
+        document.querySelectorAll('.subtab-content').forEach(sc => sc.classList.add('hidden'));
+        subtab.classList.add('active');
+        document.getElementById(subtab.dataset.subtab).classList.remove('hidden');
       });
     });
 
-    // Obsługa subzakładek (market)
-    const subtabs = document.querySelectorAll(".subtab");
-    const subcontents = document.querySelectorAll(".subtab-content");
-
-    subtabs.forEach(subtab => {
-      subtab.addEventListener("click", () => {
-        subtabs.forEach(st => st.classList.remove("active"));
-        subcontents.forEach(sc => sc.classList.add("hidden"));
-        subtab.classList.add("active");
-        document.getElementById(subtab.dataset.subtab).classList.remove("hidden");
-      });
-    });
-
-    // Obsługa stanu logowania
-    onAuthStateChanged(auth, (user) => {
-      const marketTab = document.querySelector('[data-tab="market"]');
-      const farmTab = document.querySelector('[data-tab="farm"]');
-      if (user) {
-        userInfo.textContent = `Zalogowany jako: ${user.displayName}`;
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        marketTab.style.display = "";
-        farmTab.style.display = "";
-      } else {
-        userInfo.textContent = "Nie jesteś zalogowany.";
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        marketTab.style.display = "none";
-        farmTab.style.display = "none";
-
-        // Jeśli użytkownik był na niedozwolonej zakładce, przełącz go na Top listy
-        if (!document.querySelector('[data-tab="toplist"]').classList.contains('active')) {
-          tabs.forEach(t => t.classList.remove('active'));
-          contents.forEach(c => c.classList.add('hidden'));
-          const toplistTab = document.querySelector('[data-tab="toplist"]');
-          toplistTab.classList.add('active');
-          document.getElementById("toplist").classList.remove("hidden");
-        }
-      }
-    });
-
-    // Ładowanie Top listy
-    async function loadTopList() {
-      const el = document.getElementById('leaderboard');
-      el.textContent = 'Ładowanie...';
-      try {
-        const q = query(collection(db, 'garlic-leaderboard'), orderBy('score', 'desc'), limit(10));
-        const docs = await getDocs(q);
-        if (docs.empty) {
-          el.textContent = 'Brak danych w Top listach.';
-          return;
-        }
-        const list = Array.from(docs).map(doc => {
-          const d = doc.data();
-          return `${d.name}: ${d.score.toFixed(2)}`;
-        });
-        el.innerHTML = '<ol>' + list.map(i => `<li>${i}</li>`).join('') + '</ol>';
-      } catch(e) {
-        el.textContent = 'Błąd ładowania Top list.';
-        console.error(e);
-      }
+    function updateStatusDisplay() {
+      status.textContent = `🧄 ${garlic} | 💰 ${money}`;
     }
 
-    loadTopList();
+    async function loadUserData(user) {
+      const docRef = doc(db, "garlic-leaderboard", user.uid);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        garlic = data.garlic ?? 0;
+        money = data.money ?? 100;
+      } else {
+        garlic = 0;
+        money = 100;
+        await setDoc(docRef, {
+          name: user.displayName,
+          garlic,
+          money
+        });
+      }
+      updateStatusDisplay();
+    }
+
+    async function saveUserData() {
+      if (!currentUser) return;
+      await setDoc(doc(db, "garlic-leaderboard", currentUser.uid), {
+        name: currentUser.displayName,
+        garlic,
+        money
+      });
+    }
+
+    async function loadTopLists() {
+      const topGarlic = document.getElementById("topGarlic");
+      const topMoney = document.getElementById("topMoney");
+
+      const qGarlic = query(collection(db, "garlic-leaderboard"), orderBy("garlic", "desc"), limit(10));
+      const qMoney = query(collection(db, "garlic-leaderboard"), orderBy("money", "desc"), limit(10));
+
+      const [snapGarlic, snapMoney] = await Promise.all([getDocs(qGarlic), getDocs(qMoney)]);
+
+      topGarlic.innerHTML = "<ol>" + snapGarlic.docs.map(doc => {
+        const d = doc.data();
+        return `<li>${d.name}: 🧄 ${d.garlic ?? 0}</li>`;
+      }).join('') + "</ol>";
+
+      topMoney.innerHTML = "<ol>" + snapMoney.docs.map(doc => {
+        const d = doc.data();
+        return `<li>${d.name}: 💰 ${d.money ?? 0}</li>`;
+      }).join('') + "</ol>";
+    }
+
+    // Logowanie Google (automatyczne)
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        currentUser = user;
+        await loadUserData(user);
+      } else {
+        signInWithPopup(auth, provider).catch(console.error);
+      }
+    });
+
+    loadTopLists();
   </script>
 </body>
 </html>
