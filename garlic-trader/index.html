@@ -52,6 +52,10 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    .disabled {
+      pointer-events: none;
+      opacity: 0.4;
+    }
   </style>
 </head>
 <body>
@@ -64,11 +68,11 @@
       <button class="button hidden" id="logout-btn">Wyloguj się</button>
     </div>
   </div>  <h1>Garlic Trader🧄</h1>  <div class="tabs" id="mainTabs">
-    <div class="tab active" data-tab="market">Market</div>
-    <div class="tab" data-tab="farm">Farma</div>
-    <div class="tab" data-tab="toplist">Top listy</div>
+    <div class="tab disabled" data-tab="market">Market</div>
+    <div class="tab disabled" data-tab="farm">Farma</div>
+    <div class="tab active" data-tab="toplist">Top listy</div>
   </div>  <div class="content">
-    <div id="market" class="tab-content">
+    <div id="market" class="tab-content hidden">
       <div class="subtabs">
         <div class="subtab active" data-subtab="buy">Kupię</div>
         <div class="subtab" data-subtab="sell">Sprzedam</div>
@@ -83,7 +87,7 @@
   <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
 </div>
 
-<div id="toplist" class="tab-content hidden">
+<div id="toplist" class="tab-content">
   <p>🥇 Top gracze wg ilości czosnku:</p>
   <div id="top-garlic">Ładowanie...</div>
   <p>💵 Top gracze wg ilości pieniędzy:</p>
@@ -112,6 +116,7 @@
     const logoutBtn = document.getElementById("logout-btn");
     const garlicCount = document.getElementById("garlic-count");
     const moneyCount = document.getElementById("money-count");
+    const tabs = document.querySelectorAll('.tab');
 
     let currentUser = null;
 
@@ -130,14 +135,41 @@
         loginBtn.classList.add("hidden");
         logoutBtn.classList.remove("hidden");
         await loadOrCreatePlayer(user);
+        enableRestrictedTabs();
       } else {
         currentUser = null;
         loginBtn.classList.remove("hidden");
         logoutBtn.classList.add("hidden");
         garlicCount.textContent = "-";
         moneyCount.textContent = "-";
+        disableRestrictedTabs();
+        switchToToplist();
       }
     });
+
+    function enableRestrictedTabs() {
+      tabs.forEach(tab => {
+        if (tab.dataset.tab === "market" || tab.dataset.tab === "farm") {
+          tab.classList.remove("disabled");
+        }
+      });
+    }
+
+    function disableRestrictedTabs() {
+      tabs.forEach(tab => {
+        if (tab.dataset.tab === "market" || tab.dataset.tab === "farm") {
+          tab.classList.add("disabled");
+        }
+      });
+    }
+
+    function switchToToplist() {
+      tabs.forEach(tab => tab.classList.remove("active"));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      const toplistTab = [...tabs].find(t => t.dataset.tab === 'toplist');
+      toplistTab.classList.add("active");
+      document.getElementById('toplist').classList.remove("hidden");
+    }
 
     async function loadOrCreatePlayer(user) {
       const ref = doc(db, "garlic-leaderboard", user.uid);
@@ -176,9 +208,9 @@
 
     loadTopLists();
 
-    // Zakładki główne i podrzędne
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        if (tab.classList.contains('disabled')) return;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         tab.classList.add('active');
