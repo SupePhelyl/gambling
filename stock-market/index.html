@@ -145,7 +145,7 @@
       const chaos = seedRand(t / 123456 + currency.length * 999 + day);  
       switch (currency) {  
         case "ALFA":  
-          return 50 + Math.sec(t / 13333) * 8 + chaos * 5;  
+          return 50 + Math.sin(t / 13333 * day / chaos) * 8 + chaos * 5;  
         case "BETA":  
           return Math.abs(30 + Math.cos(t / 7777) * 12 + Math.cos(t / 2222 * chaos + chaos * 3) * Math.tan(day / chaos * 3));  
         case "GAMMA":  
