@@ -111,7 +111,7 @@
     const currencies = ["ALFA", "BETA", "GAMMA", "DELTA", "OMEGA"];    
     const portfolio = JSON.parse(localStorage.getItem("portfolio") || "{}");    
     let balance = parseFloat(localStorage.getItem("balance") || "1000");    
-    let username = localStorage.getItem("username") || Math.random()*100;    
+    let username = localStorage.getItem("username") || "";    
     let activeCurrency = currencies[0];    
     let hellMode = false;    
     const ctx = document.getElementById("chart").getContext("2d");    
@@ -273,7 +273,7 @@
     }    
     
     function buyAll() {    
-      username = document.getElementById("username").value.trim() || "Anon";    
+      username = document.getElementById("username").value.trim() || Math.floor(Math.random()*100);    
       localStorage.setItem("username", username);    
       const price = getPrice(activeCurrency, Date.now());    
       if (price <= 0) return alert("Błędny kurs");    
