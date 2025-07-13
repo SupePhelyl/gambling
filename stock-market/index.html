@@ -210,9 +210,11 @@
       const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);    
       const change = (((current - prev) / prev) * 100).toFixed(2);    
       let balances = balance;
+      const balancesx = "";
       if (Math.floor(balances).toString().length >= 10) {
         balances = Math.floor(Math.floor(balances) / 100000000)/10;
-	const balancesx = balances.toString() + " mld";
+	balancesx = balances.toString() + " mld";
+      }
       info.innerHTML = `    
         💱 Kurs: $${current.toFixed(2)}<br/>    
         📈 Zmiana 5m: ${change}%<br/>    
