@@ -57,9 +57,12 @@
       margin: 10px 0;
       font-size: 18px;
     }
-    .hell {
-      background: #300;
-      color: #f55;
+    #leaderboard {
+      background: #333;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      max-width: 400px;
     }
   </style>
 </head>
@@ -77,13 +80,31 @@
       <button onclick="sellAll()">Sprzedaj wszystkie</button>
     </div>
     <div class="stats" id="info"></div>
+    <div id="leaderboard">Wczytywanie wyników...</div>
     <div class="chart-container">
       <canvas id="chart"></canvas>
     </div>
   </div>
 
-  <script>
-    const url = "";
+  <!-- FIREBASE -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-analytics.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCo4E88eJrumSph1gyizPxMG2nn2YyMVx8",
+      authDomain: "gielda-20172.firebaseapp.com",
+      projectId: "gielda-20172",
+      storageBucket: "gielda-20172.appspot.com",
+      messagingSenderId: "985455770805",
+      appId: "1:985455770805:web:a80aaf536a6a5d064c52fc",
+      measurementId: "G-Y0YE9LYR49"
+    };
+	
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
     const currencies = ["ALFA", "BETA", "GAMMA", "DELTA", "OMEGA"];
     const portfolio = JSON.parse(localStorage.getItem("portfolio") || "{}");
     let balance = parseFloat(localStorage.getItem("balance") || "1000");
@@ -114,7 +135,6 @@
       let x = Math.sin(seed) * 10000;
       return x - Math.floor(x);
     }
-    
 
     function getPrice(currency, timestamp) {
       const t = roundTime5s(timestamp);
@@ -124,7 +144,7 @@
         case "ALFA":
           return 50 + Math.sin(t / 13333) * 8 + chaos * 5;
         case "BETA":
-          return Math.abs(30 + Math.cos(t / 7777) * 12 + Math.sin(t / 2222 * chaos + chaos * 3) * Math.tan(day/chaos*3));
+          return Math.abs(30 + Math.cos(t / 7777) * 12 + Math.sin(t / 2222 * chaos + chaos * 3) * Math.tan(day / chaos * 3));
         case "GAMMA":
           return 80 + (Math.pow(Math.sin(t / 10000), 3) + chaos) * 15;
         case "DELTA":
@@ -137,67 +157,65 @@
     }
 
     function updateChart() {
-	  const now = roundTime5s(Date.now());
-	
-	  // Jeśli zmieniamy zakładkę (wykres już istnieje i jest z inną walutą),
-	  // to tworzymy nowy wykres od zera dla activeCurrency
-	  if (chart && chart.data.datasets[0].label !== activeCurrency) {
-	    chart.destroy();
-	    chart = null;
-	  }
-	
-	  if (!chart) {
-	    const timestamps = getTimestamps();
-	    const data = timestamps.map(t => getPrice(activeCurrency, t));
-	    const labels = timestamps.map(t => new Date(t).toLocaleTimeString());
-	
-	    chart = new Chart(ctx, {
-	      type: "line",
-	      data: {
-	        labels: labels,
-	        datasets: [{
-	          label: activeCurrency,
-	          data: data,
-	          borderColor: "#ffd700",
-	          borderWidth: 2,
-	          fill: false,
-	          tension: 0.3
-	        }]
-	      },
-	      options: {
-	        animation: false,
-	        scales: { y: { beginAtZero: false }},
-	        plugins: { legend: { display: false } }
-	      }
-	    });
-	  } else {
-	    const price = getPrice(activeCurrency, now);
-	    const label = new Date(now).toLocaleTimeString();
-	    const lastLabel = chart.data.labels[chart.data.labels.length - 1];
-	    if (lastLabel !== label) {
-	      chart.data.labels.push(label);
-	      chart.data.labels.shift();
-	      chart.data.datasets[0].data.push(price);
-	      chart.data.datasets[0].data.shift();
-	      chart.update("none");
-	    }
-	  }
-	
-	  const current = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
-	  const prev = chart.data.datasets[0].data[0];
-	  const owned = portfolio[activeCurrency] || 0;
-	  const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
-	  const change = (((current - prev) / prev) * 100).toFixed(2);
-	
-	  info.innerHTML = `
-	    💱 Kurs: $${current.toFixed(2)}<br/>
-	    📈 Zmiana 5m: ${change}%<br/>
-	    🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>
-	    💰 Możesz kupić: ${maxBuy} jednostek<br/>
-	    🏦 Saldo: $${balance.toFixed(2)}<br/>
-            💲 Wartość: $${(owned*current).toFixed(2)}
-	  `;
-	}
+      const now = roundTime5s(Date.now());
+
+      if (chart && chart.data.datasets[0].label !== activeCurrency) {
+        chart.destroy();
+        chart = null;
+      }
+
+      if (!chart) {
+        const timestamps = getTimestamps();
+        const data = timestamps.map(t => getPrice(activeCurrency, t));
+        const labels = timestamps.map(t => new Date(t).toLocaleTimeString());
+
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: activeCurrency,
+              data: data,
+              borderColor: "#ffd700",
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            }]
+          },
+          options: {
+            animation: false,
+            scales: { y: { beginAtZero: false }},
+            plugins: { legend: { display: false } }
+          }
+        });
+      } else {
+        const price = getPrice(activeCurrency, now);
+        const label = new Date(now).toLocaleTimeString();
+        const lastLabel = chart.data.labels[chart.data.labels.length - 1];
+        if (lastLabel !== label) {
+          chart.data.labels.push(label);
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.push(price);
+          chart.data.datasets[0].data.shift();
+          chart.update("none");
+        }
+      }
+
+      const current = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
+      const prev = chart.data.datasets[0].data[0];
+      const owned = portfolio[activeCurrency] || 0;
+      const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);
+      const change = (((current - prev) / prev) * 100).toFixed(2);
+
+      info.innerHTML = `
+        💱 Kurs: $${current.toFixed(2)}<br/>
+        📈 Zmiana 5m: ${change}%<br/>
+        🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>
+        💰 Możesz kupić: ${maxBuy} jednostek<br/>
+        🏦 Saldo: $${balance.toFixed(2)}<br/>
+        💲 Wartość: $${(owned*current).toFixed(2)}
+      `;
+    }
 
     function buildTabs() {
       tabBar.innerHTML = "";
@@ -216,17 +234,8 @@
       });
     }
 
-    function sendToWebhook(action, currency, amount, price) {
-      fetch(url + "88", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: `🧾 **${action}**\n👤 ${username}\n💱 ${currency}\n🔢 ${amount}\n💵 $${price.toFixed(2)}\n💰 Saldo: $${balance.toFixed(2)}\n🎒 Portfel: ${JSON.stringify(portfolio)}`
-        })
-      });
-    }
-
     function buy() {
+      
       username = document.getElementById("username").value.trim() || "Anon";
       localStorage.setItem("username", username);
       const amount = parseFloat(document.getElementById("amount").value);
@@ -240,7 +249,8 @@
       portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + amount;
       if (!hellMode) balance -= cost;
       save();
-      sendToWebhook("Kupno", activeCurrency, amount, price);
+      saveScoreToFirebase(username, balance);
+      showLeaderboard();
       updateChart();
     }
 
@@ -253,7 +263,8 @@
       portfolio[activeCurrency] -= amount;
       balance += amount * price;
       save();
-      sendToWebhook("Sprzedaż", activeCurrency, amount, price);
+      saveScoreToFirebase(username, balance);
+      showLeaderBoard();
       updateChart();
     }
 
@@ -266,13 +277,14 @@
         alert("Tryb piekielny - kupujesz nieskończoną ilość");
         portfolio[activeCurrency] = Infinity;
       } else {
-        const maxAmount = Math.floor(balance / price * 100) / 100; // zaokrąglenie do 2 miejsc
+        const maxAmount = Math.floor(balance / price * 100) / 100;
         if (maxAmount <= 0) return alert("Za mało środków");
         portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + maxAmount;
         balance -= maxAmount * price;
       }
       save();
-      sendToWebhook("Kupno wszystkie", activeCurrency, portfolio[activeCurrency], price);
+      saveScoreToFirebase(username, balance);
+      showLeaderboard();
       updateChart();
     }
 
@@ -283,7 +295,8 @@
       portfolio[activeCurrency] = 0;
       balance += owned * price;
       save();
-      sendToWebhook("Sprzedaż wszystkie", activeCurrency, owned, price);
+      saveScoreToFirebase(username, balance);
+      showLeaderboard();
       updateChart();
     }
 
@@ -292,9 +305,55 @@
       localStorage.setItem("portfolio", JSON.stringify(portfolio));
     }
 
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+	async function saveScoreToFirebase(username, score) {
+	  try {
+	    const docRef = doc(db, "leaderboard", username);
+	    await setDoc(docRef, {
+	      name: username,
+	      score: score,
+	      timestamp: new Date()
+	    });
+	    console.log("Wynik zapisany do Firebase");
+	  } catch (e) {
+	    console.error("Błąd zapisu wyniku: ", e);
+	  }
+	}
+
+    async function showLeaderboard() {
+		  const leaderboardEl = document.getElementById("leaderboard");
+		  leaderboardEl.innerHTML = "Wczytywanie wyników...";
+		  try {
+		    const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10));
+		    const querySnapshot = await getDocs(q);
+		
+		    if (querySnapshot.empty) {
+		      leaderboardEl.innerHTML = "<h3>🏆 Najlepsze wyniki:</h3><p>Brak zapisanych wyników.</p>";
+		      return;
+		    }
+		
+		    let html = "<h3>🏆 Najlepsze wyniki:</h3><ol>";
+		    querySnapshot.forEach((doc) => {
+		      const data = doc.data();
+		      html += `<li>${data.name}: $${data.score.toFixed(2)}</li>`;
+		    });
+		    html += "</ol>";
+		    leaderboardEl.innerHTML = html;
+		  } catch (error) {
+		    console.error("Błąd podczas pobierania leaderboarda:", error);
+		    leaderboardEl.innerHTML = "<p>Nie udało się wczytać wyników.</p>";
+		  }
+		}
+	window.buy = buy;
+	window.sell = sell;
+	window.buyAll = buyAll;
+	window.sellAll = sellAll;
+
     setInterval(updateChart, 5000);
     buildTabs();
     updateChart();
+    showLeaderboard();
   </script>
 </body>
 </html>
