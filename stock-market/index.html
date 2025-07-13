@@ -1,1 +1,362 @@
-
+<!DOCTYPE html>  
+<html lang="pl">  
+<head>  
+  <meta charset="UTF-8" />  
+  <title>Giełda Szalona</title>  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
+  <style>  
+    body {  
+      background: #111;  
+      color: #f5f5f5;  
+      font-family: sans-serif;  
+      margin: 0;  
+      padding: 20px;  
+    }  
+    .tabs {  
+      display: flex;  
+      overflow-x: auto;  
+      margin-bottom: 20px;  
+    }  
+    .tab {  
+      background: #333;  
+      padding: 10px 20px;  
+      cursor: pointer;  
+      border-radius: 8px 8px 0 0;  
+      margin-right: 5px;  
+    }  
+    .tab.active {  
+      background: #ffd700;  
+      color: #000;  
+    }  
+    .content {  
+      background: #222;  
+      padding: 20px;  
+      border-radius: 0 0 12px 12px;  
+    }  
+    .chart-container {  
+      width: 100%;  
+      max-width: 800px;  
+      margin: auto;  
+    }  
+    canvas {  
+      max-height: 300px;  
+    }  
+    input, button {  
+      padding: 10px;  
+      font-size: 16px;  
+      margin: 5px;  
+      border-radius: 5px;  
+      border: none;  
+    }  
+    button {  
+      background: #ffd700;  
+      color: #000;  
+      cursor: pointer;  
+    }  
+    .stats {  
+      margin: 10px 0;  
+      font-size: 18px;  
+    }  
+    #leaderboard {  
+      background: #333;  
+      padding: 10px;  
+      border-radius: 10px;  
+      margin-bottom: 20px;  
+      max-width: 400px;  
+    }  
+  </style>  
+</head>  
+<body>  
+  <div class="tabs" id="tabBar"></div>  
+  <div class="content">  
+    <div>  
+      <input id="username" placeholder="Twoje imię" />  
+      <input id="amount" placeholder="Ilość" type="number" />  
+      <button onclick="buy()">Kup</button>  
+      <button onclick="sell()">Sprzedaj</button>  
+    </div>  
+    <div>  
+      <button onclick="buyAll()">Kup wszystkie</button>  
+      <button onclick="sellAll()">Sprzedaj wszystkie</button>  
+    </div>  
+    <div class="stats" id="info"></div>  
+    <div id="leaderboard">Wczytywanie wyników...</div>  
+    <div class="chart-container">  
+      <canvas id="chart"></canvas>  
+    </div>  
+  </div>  
+  
+  <!-- FIREBASE -->  
+  <script type="module">  
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";  
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-analytics.js";  
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";  
+  
+    const encodedConfig = {  
+      apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",  
+      authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",  
+      projectId: "Z2llbGRhLTIwMTcy",  
+      storageBucket: "Z2llbGRhLTIwMTcyLmFwcHNwb3QuY29t",  
+      messagingSenderId: "OTg1NDU1NzcwODA1",  
+      appId: "MTo5ODU0NTU3NzA4MDU6d2ViOmE4MGFhZjUzNmE2YTVkMDY0YzUyZmM=",  
+      measurementId: "Ry1ZMFlFOUxZUjQ5"  
+    };  
+	const firebaseConfig = {};
+	for (const key in encodedConfig) {
+	  firebaseConfig[key] = atob(encodedConfig[key]);
+     }
+    const app = initializeApp(firebaseConfig);  
+    const analytics = getAnalytics(app);  
+    const db = getFirestore(app);  
+    const currencies = ["ALFA", "BETA", "GAMMA", "DELTA", "OMEGA"];  
+    const portfolio = JSON.parse(localStorage.getItem("portfolio") || "{}");  
+    let balance = parseFloat(localStorage.getItem("balance") || "1000");  
+    let username = localStorage.getItem("username") || "";  
+    let activeCurrency = currencies[0];  
+    let hellMode = false;  
+    const ctx = document.getElementById("chart").getContext("2d");  
+    let chart;  
+    let tabBar = document.getElementById("tabBar");  
+    const info = document.getElementById("info");  
+  
+    document.getElementById("username").value = username;  
+  
+    function roundTime5s(ts = Date.now()) {  
+      return Math.floor(ts / 5000) * 5000;  
+    }  
+  
+    function getTimestamps() {  
+      const now = Date.now();  
+      const timestamps = [];  
+      for (let i = 29; i >= 0; i--) {  
+        timestamps.push(roundTime5s(now - i * 5000));  
+      }  
+      return timestamps;  
+    }  
+  
+    function seedRand(seed) {  
+      let x = Math.sin(seed) * 10000;  
+      return x - Math.floor(x);  
+    }  
+  
+    function getPrice(currency, timestamp) {  
+      const t = roundTime5s(timestamp);  
+      const day = new Date(t).getDate();  
+      const chaos = seedRand(t / 123456 + currency.length * 999 + day);  
+      switch (currency) {  
+        case "ALFA":  
+          return 50 + Math.sin(t / 13333) * 8 + chaos * 5;  
+        case "BETA":  
+          return Math.abs(30 + Math.cos(t / 7777) * 12 + Math.sin(t / 2222 * chaos + chaos * 3) * Math.tan(day / chaos * 3));  
+        case "GAMMA":  
+          return 80 + (Math.pow(Math.sin(t / 10000), 3) + chaos) * 15;  
+        case "DELTA":  
+          return 10 + Math.abs(Math.tan(t / 66666 + chaos)) % 20;  
+        case "OMEGA":  
+          return 100 + (Math.sin(t / 4444) * Math.cos(t / 3210) + chaos) * 25;  
+        default:  
+          return 1;  
+      }  
+    }  
+  
+    function updateChart() {  
+      const now = roundTime5s(Date.now());  
+  
+      if (chart && chart.data.datasets[0].label !== activeCurrency) {  
+        chart.destroy();  
+        chart = null;  
+      }  
+  
+      if (!chart) {  
+        const timestamps = getTimestamps();  
+        const data = timestamps.map(t => getPrice(activeCurrency, t));  
+        const labels = timestamps.map(t => new Date(t).toLocaleTimeString());  
+  
+        chart = new Chart(ctx, {  
+          type: "line",  
+          data: {  
+            labels: labels,  
+            datasets: [{  
+              label: activeCurrency,  
+              data: data,  
+              borderColor: "#ffd700",  
+              borderWidth: 2,  
+              fill: false,  
+              tension: 0.3  
+            }]  
+          },  
+          options: {  
+            animation: false,  
+            scales: { y: { beginAtZero: false }},  
+            plugins: { legend: { display: false } }  
+          }  
+        });  
+      } else {  
+        const price = getPrice(activeCurrency, now);  
+        const label = new Date(now).toLocaleTimeString();  
+        const lastLabel = chart.data.labels[chart.data.labels.length - 1];  
+        if (lastLabel !== label) {  
+          chart.data.labels.push(label);  
+          chart.data.labels.shift();  
+          chart.data.datasets[0].data.push(price);  
+          chart.data.datasets[0].data.shift();  
+          chart.update("none");  
+        }  
+      }  
+  
+      const current = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];  
+      const prev = chart.data.datasets[0].data[0];  
+      const owned = portfolio[activeCurrency] || 0;  
+      const maxBuy = hellMode ? "∞" : (balance / current).toFixed(2);  
+      const change = (((current - prev) / prev) * 100).toFixed(2);  
+  
+      info.innerHTML = `  
+        💱 Kurs: $${current.toFixed(2)}<br/>  
+        📈 Zmiana 5m: ${change}%<br/>  
+        🎒 Masz: ${owned.toFixed(2)} ${activeCurrency}<br/>  
+        💰 Możesz kupić: ${maxBuy} jednostek<br/>  
+        🏦 Saldo: $${balance.toFixed(2)}<br/>  
+        💲 Wartość: $${(owned*current).toFixed(2)}  
+      `;  
+    }  
+  
+    function buildTabs() {  
+      tabBar.innerHTML = "";  
+      currencies.forEach(c => {  
+        const el = document.createElement("div");  
+        let own = portfolio[c]  
+        if (own === undefined) own = 0;  
+        el.textContent = c + " " + own;  
+        el.className = "tab" + (c === activeCurrency ? " active" : "");  
+        el.onclick = () => {  
+          activeCurrency = c;  
+          buildTabs();  
+          updateChart();  
+        };  
+        tabBar.appendChild(el);  
+      });  
+    }  
+  
+    function buy() {  
+        
+      username = document.getElementById("username").value.trim() || "Anon";  
+      localStorage.setItem("username", username);  
+      const amount = parseFloat(document.getElementById("amount").value);  
+      if (amount === 192168) {  
+        localStorage.clear(); location.reload(); return;  
+      }  
+      if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");  
+      const price = getPrice(activeCurrency, Date.now());  
+      const cost = amount * price;  
+      if (!hellMode && cost > balance) return alert("Za mało środków");  
+      portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + amount;  
+      if (!hellMode) balance -= cost;  
+      save();  
+      saveScoreToFirebase(username, balance);  
+      showLeaderboard();  
+      updateChart();  
+    }  
+  
+    function sell() {  
+      const amount = parseFloat(document.getElementById("amount").value);  
+      if (isNaN(amount) || amount <= 0) return alert("Podaj poprawną ilość");  
+      const owned = portfolio[activeCurrency] || 0;  
+      if (amount > owned) return alert("Za mało jednostek");  
+      const price = getPrice(activeCurrency, Date.now());  
+      portfolio[activeCurrency] -= amount;  
+      balance += amount * price;  
+      save();  
+      saveScoreToFirebase(username, balance);  
+      showLeaderBoard();  
+      updateChart();  
+    }  
+  
+    function buyAll() {  
+      username = document.getElementById("username").value.trim() || "Anon";  
+      localStorage.setItem("username", username);  
+      const price = getPrice(activeCurrency, Date.now());  
+      if (price <= 0) return alert("Błędny kurs");  
+      if (hellMode) {  
+        alert("Tryb piekielny - kupujesz nieskończoną ilość");  
+        portfolio[activeCurrency] = Infinity;  
+      } else {  
+        const maxAmount = Math.floor(balance / price * 100) / 100;  
+        if (maxAmount <= 0) return alert("Za mało środków");  
+        portfolio[activeCurrency] = (portfolio[activeCurrency] || 0) + maxAmount;  
+        balance -= maxAmount * price;  
+      }  
+      save();  
+      saveScoreToFirebase(username, balance);  
+      showLeaderboard();  
+      updateChart();  
+    }  
+  
+    function sellAll() {  
+      const owned = portfolio[activeCurrency] || 0;  
+      if (owned <= 0) return alert("Nie masz żadnych jednostek do sprzedaży");  
+      const price = getPrice(activeCurrency, Date.now());  
+      portfolio[activeCurrency] = 0;  
+      balance += owned * price;  
+      save();  
+      saveScoreToFirebase(username, balance);  
+      showLeaderboard();  
+      updateChart();  
+    }  
+  
+    function save() {  
+      localStorage.setItem("balance", balance);  
+      localStorage.setItem("portfolio", JSON.stringify(portfolio));  
+    }  
+  
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";  
+  
+	async function saveScoreToFirebase(username, score) {  
+	  try {  
+	    const docRef = doc(db, "leaderboard", username);  
+	    await setDoc(docRef, {  
+	      name: username,  
+	      score: score,  
+	      timestamp: new Date()  
+	    });  
+	    console.log("Wynik zapisany do Firebase");  
+	  } catch (e) {  
+	    console.error("Błąd zapisu wyniku: ", e);  
+	  }  
+	}  
+  
+    async function showLeaderboard() {  
+		  const leaderboardEl = document.getElementById("leaderboard");  
+		  leaderboardEl.innerHTML = "Wczytywanie wyników...";  
+		  try {  
+		    const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10));  
+		    const querySnapshot = await getDocs(q);  
+		  
+		    if (querySnapshot.empty) {  
+		      leaderboardEl.innerHTML = "<h3>🏆 Najlepsze wyniki:</h3><p>Brak zapisanych wyników.</p>";  
+		      return;  
+		    }  
+		  
+		    let html = "<h3>🏆 Najlepsze wyniki:</h3><ol>";  
+		    querySnapshot.forEach((doc) => {  
+		      const data = doc.data();  
+		      html += `<li>${data.name}: $${data.score.toFixed(2)}</li>`;  
+		    });  
+		    html += "</ol>";  
+		    leaderboardEl.innerHTML = html;  
+		  } catch (error) {  
+		    console.error("Błąd podczas pobierania leaderboarda:", error);  
+		    leaderboardEl.innerHTML = "<p>Nie udało się wczytać wyników.</p>";  
+		  }  
+		}  
+	window.buy = buy;  
+	window.sell = sell;  
+	window.buyAll = buyAll;  
+	window.sellAll = sellAll;  
+  
+    setInterval(updateChart, 5000);  
+    buildTabs();  
+    updateChart();  
+    showLeaderboard();  
+  </script>  
+</body>  
+</html>
