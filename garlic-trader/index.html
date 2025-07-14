@@ -591,6 +591,8 @@
             const ref = doc(db, "offers", id);
             const snap = await getDoc(ref);
             const data = snap.data();
+            if (data.type==="sell") changeStats(currentUser, data.amount, 0);
+            if (data.type==="buy") changeStats(currentUser, 0, data.amount * data.price);
             try {
               await deleteDoc(doc(db, "offers", id));
               loadOffers();
