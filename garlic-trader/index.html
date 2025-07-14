@@ -463,19 +463,44 @@
     function createOfferElement(id, data) {
       const div = document.createElement("div");
       div.className = "offer";
-
+    
       const details = document.createElement("div");
       details.className = "offer-details";
-      details.textContent = `${data.userName} chce ${data.type === "buy" ? "kupić" : "sprzedać"} "${data.name}" — ilość: ${data.amount}, cena: $${data.price.toFixed(2)}`;
-
+    
+      const nameEl = document.createElement("div");
+      nameEl.className = "offer-name";
+      nameEl.textContent = data.name.toUpperCase();
+    
+      // Typ oferty i odpowiednie słowa
+      const action = data.type === "buy" ? "kupić" : "sprzedać";
+      const amountLabel = data.type === "buy" ? "Zapotrzebowanie" : "Zapas";
+    
+      const userEl = document.createElement("div");
+      userEl.className = "offer-user";
+      userEl.textContent = `${data.userName} chce ${action} czosnek.`;
+    
+      const priceEl = document.createElement("div");
+      priceEl.className = "offer-price";
+      priceEl.textContent = `Cena jednostkowa: $${data.price.toFixed(2)}`;
+    
+      const amountEl = document.createElement("div");
+      amountEl.className = "offer-amount";
+      amountEl.textContent = `${amountLabel}: ${data.amount}`;
+    
+      details.appendChild(nameEl);
+      details.appendChild(userEl);
+      details.appendChild(priceEl);
+      details.appendChild(amountEl);
+    
       const btn = document.createElement("button");
       btn.textContent = "Handluj";
       btn.onclick = () => openTradeModal(id, data);
-
+    
       div.appendChild(details);
       div.appendChild(btn);
       return div;
     }
+
 
     // Otwiera modal handlu (na razie tylko pokazuje)
     function openTradeModal(id, data) {
