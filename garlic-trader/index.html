@@ -473,8 +473,12 @@
           offersBuyDiv.innerHTML = "";
           buySnap.forEach(doc => {
             const data = doc.data();
-            const offerEl = createOfferElement(doc.id, data);
-            offersBuyDiv.appendChild(offerEl);
+            createOfferElement(doc.id, data).then(el => {
+              const offerEl = el;
+              offersBuyDiv.appendChild(offerEl);
+            });
+             
+            
           });
         }
 
@@ -497,7 +501,7 @@
     }
 
     // Tworzy element oferty z przyciskiem "Handluj"
-    function createOfferElement(id, data) {
+    async function createOfferElement(id, data) {
       const div = document.createElement("div");
       div.className = "offer";
     
