@@ -344,10 +344,11 @@
       const ref = doc(db, "garlic-leaderboard", user.uid);
       const snap = await getDoc(ref);
       const data = snap.data();
-      await setDoc(ref, { name: user.displayName, garlic: (garlicAm+data.garlic), money: (moneyAm*data.money) });
-      const data = snap.data();
-      garlicCount.textContent = data.garlic;
-      moneyCount.textContent = data.money;
+      let NewGar = garlicAm+data.garlic;
+      let newMon = moneyAm*data.money;
+      await setDoc(ref, { name: user.displayName, garlic: newGar, money: newMon });
+      garlicCount.textContent = newGar;
+      moneyCount.textContent = newMon;
     }
 
     async function loadTopLists() {
