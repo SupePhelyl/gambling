@@ -571,15 +571,15 @@
             if (data.type==="sell") {
               if (newType==="sell"){
                 changeStats(currentUser, data.amount - newAmount, 0);
-              } else {
+              } else if (newType==="buy"){
                 changeStats(currentUser, data.amount, 0);
                 changeStats(currentUser, 0, -1 * newAmount * newPrice);
               }
-            } else {
+            } else if (data.type==="buy"){
               if (newType==="sell"){
                 changeStats(currentUser, 0, data.amount * data.price);
                 changeStats(currentUser, -1 * newAmount, 0);
-              } else {
+              } else if (newType==="buy"){
                 changeStats(currentUser, 0, (data.amount * data.price) - (newAmount * newPrice));
               }
             }
