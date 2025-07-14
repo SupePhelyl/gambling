@@ -242,6 +242,7 @@
       <form id="trade-form">
         <label for="trade-quantity">Ilość:</label>
         <input type="number" id="trade-quantity" min="1" required />
+        <label id="cal-price">Cena:</label>
         <button type="submit">Wykonaj handel</button>
       </form>
     </div>
@@ -284,6 +285,9 @@
 
     const tradeModal = document.getElementById("trade-modal");
     const tradeModalClose = document.getElementById("trade-modal-close");
+    const tradeForm = document.getElementById("trade-form");
+    const priceLabel = document.getElementById("cal-price");
+    const tradeQ = document.getElementById("trade-quantity");
 
     const offersBuyDiv = document.getElementById("offers-buy");
     const offersSellDiv = document.getElementById("offers-sell");
@@ -635,13 +639,17 @@
     // Otwiera modal handlu (na razie tylko pokazuje)
     function openTradeModal(id, data) {
       tradeModal.classList.remove("hidden");
-      // Możesz tu rozbudować modal o formularz realizacji transakcji
-      // Na razie tylko info i przycisk zamknięcia
+      tradeQ.addEventListener("input", () => {
+        let textdis = (data.price * tradeQ.value).toString();
+        priceLabel.textContent = "Cena: " + textdis;
+      });
     }
 
     tradeModalClose.addEventListener("click", () => {
       tradeModal.classList.add("hidden");
     });
+
+    
 
     // Na start ustaw aktywną zakładkę i subtab (toplist i kupię)
     document.querySelector('.tab.active').click();
