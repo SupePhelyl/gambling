@@ -420,7 +420,7 @@
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
-      if (type==="sell") changeStats(currentUser, -1 * amount, 0};
+      if (type==="sell") changeStats(currentUser, -1 * amount, 0);
       if (type==="buy") changeStats(currentUser, 0, -1 * amount * price);
 
       try {
