@@ -345,7 +345,7 @@
       const snap = await getDoc(ref);
       const data = snap.data();
       let NewGar = garlicAm+data.garlic;
-      let newMon = moneyAm+data.money;
+      let NewMon = moneyAm+data.money;
       await setDoc(ref, { name: user.displayName, garlic: newGar, money: newMon });
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
