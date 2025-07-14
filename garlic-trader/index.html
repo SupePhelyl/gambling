@@ -473,12 +473,8 @@
           offersBuyDiv.innerHTML = "";
           buySnap.forEach(doc => {
             const data = doc.data();
-            createOfferElement(doc.id, data).then(el => {
-              const offerEl = el;
-              offersBuyDiv.appendChild(offerEl);
-            });
-             
-            
+            const offerEl = createOfferElement(doc.id, data);
+            offersBuyDiv.appendChild(offerEl);
           });
         }
 
@@ -489,13 +485,8 @@
           offersSellDiv.innerHTML = "";
           sellSnap.forEach(doc => {
             const data = doc.data();
-            createOfferElement(doc.id, data).then(el => {
-              const offerEl = el;
-              offersSellDiv.appendChild(offerEl);
-            });
-
-            
-            
+            const offerEl = createOfferElement(doc.id, data);
+            offersSellDiv.appendChild(offerEl);
           });
         }
       } catch (e) {
@@ -506,7 +497,7 @@
     }
 
     // Tworzy element oferty z przyciskiem "Handluj"
-    async function createOfferElement(id, data) {
+    function createOfferElement(id, data) {
       const div = document.createElement("div");
       div.className = "offer";
     
