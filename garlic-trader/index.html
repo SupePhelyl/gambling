@@ -1,209 +1,482 @@
-<!DOCTYPE html><html lang="pl">  
-<head>  
-  <meta charset="UTF-8">  
-  <title>Garlic Trader</title>  
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
-  <style>  
-    body {  
-      background: #111;  
-      color: #f5f5f5;  
-      font-family: sans-serif;  
-      margin: 0;  
-      padding: 20px;  
-    }  
-    .tabs, .subtabs {  
-      display: flex;  
-      overflow-x: auto;  
-      margin-bottom: 10px;  
-    }  
-    .tab, .subtab {  
-      background: #333;  
-      padding: 10px 20px;  
-      cursor: pointer;  
-      border-radius: 8px 8px 0 0;  
-      margin-right: 5px;  
-    }  
-    .tab.active, .subtab.active {  
-      background: #ffd700;  
-      color: #000;  
-    }  
-    .content {  
-      background: #222;  
-      padding: 20px;  
-      border-radius: 0 0 12px 12px;  
-    }  
-    .hidden {  
-      display: none;  
-    }  
-    .top-bar {  
-      display: flex;  
-      justify-content: space-between;  
-      align-items: center;  
-      margin-bottom: 10px;  
-    }  
-    .status {  
-      font-size: 16px;  
-    }  
-    .button {  
-      background: #ffd700;  
-      color: #000;  
-      padding: 6px 12px;  
-      border: none;  
-      border-radius: 6px;  
-      cursor: pointer;  
-    }  
-  </style>  
-</head>  
-<body>  
-  <div class="top-bar">  
-    <div class="status">  
-      🧄 Czosnek: <span id="garlic-count">-</span> | 💵 $: <span id="money-count">-</span>  
-    </div>  
-    <div>  
-      <button class="button" id="login-btn">Zaloguj się</button>  
-      <button class="button hidden" id="logout-btn">Wyloguj się</button>  
-    </div>  
-  </div>  <h1>Garlic Trader🧄</h1>  <div class="tabs" id="mainTabs">  
-    <div class="tab" data-tab="market">Market</div>  
-    <div class="tab" data-tab="farm">Farma</div>  
-    <div class="tab active" data-tab="toplist">Top listy</div>  
-  </div>  <div class="content">  
-    <div id="market" class="tab-content hidden">  
-      <div class="subtabs">  
-        <div class="subtab active" data-subtab="buy">Kupię</div>  
-        <div class="subtab" data-subtab="sell">Sprzedam</div>  
-      </div>  
-      <div id="buy" class="subtab-content">  
-        <p>🛒 Kup czosnek na rynku!</p>  
-      </div>  
-      <div id="sell" class="subtab-content hidden">  
-        <p>💰 Sprzedaj swój czosnek innym graczom!</p>  
-      </div>  
-    </div><div id="farm" class="tab-content hidden">  
-  <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>  
-</div>  
-  
-<div id="toplist" class="tab-content">  
-  <p>🥇 Top gracze wg ilości czosnku:</p>  
-  <div id="top-garlic">Ładowanie...</div>  
-  <p>💵 Top gracze wg ilości pieniędzy:</p>  
-  <div id="top-money">Ładowanie...</div>  
-</div>  
-  
-  </div>  <script type="module">  
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";  
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";  
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";  
-  
-    const encodedConfig = {  
-      apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",  
-      authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",  
-      projectId: "Z2llbGRhLTIwMTcy",  
-      storageBucket: "Z2llbGRhLTIwMTcyLmFwcHNwb3QuY29t",  
-      messagingSenderId: "OTg1NDU1NzcwODA1",  
-      appId: "MTo5ODU0NTU3NzA4MDU6d2ViOmE4MGFhZjUzNmE2YTVkMDY0YzUyZmM="  
-    };  
-    const firebaseConfig = {};  
-    for (const key in encodedConfig) {  
-      firebaseConfig[key] = atob(encodedConfig[key]);  
-    }  
-  
-    const app = initializeApp(firebaseConfig);  
-    const db = getFirestore(app);  
-    const auth = getAuth(app);  
-  
-    const loginBtn = document.getElementById("login-btn");  
-    const logoutBtn = document.getElementById("logout-btn");  
-    const garlicCount = document.getElementById("garlic-count");  
-    const moneyCount = document.getElementById("money-count");  
-  
-    let currentUser = null;  
-  
-    loginBtn.onclick = async () => {  
-      const provider = new GoogleAuthProvider();  
-      await signInWithPopup(auth, provider);  
-    };  
-  
-    logoutBtn.onclick = async () => {  
-      await signOut(auth);  
-    };  
-  
-    onAuthStateChanged(auth, async user => {  
-      const marketTab = document.querySelector('[data-tab="market"]');  
-      const farmTab = document.querySelector('[data-tab="farm"]');  
-      if (user) {  
-        currentUser = user;  
-        loginBtn.classList.add("hidden");  
-        logoutBtn.classList.remove("hidden");  
-        marketTab.classList.remove("hidden");  
-        farmTab.classList.remove("hidden");  
-        await loadOrCreatePlayer(user);  
-      } else {  
-        currentUser = null;  
-        loginBtn.classList.remove("hidden");  
-        logoutBtn.classList.add("hidden");  
-        garlicCount.textContent = "-";  
-        moneyCount.textContent = "-";  
-        marketTab.classList.add("hidden");  
-        farmTab.classList.add("hidden");  
-        document.querySelector('[data-tab="toplist"]').click();  
-      }  
-    });  
-  
-    async function loadOrCreatePlayer(user) {  
-      const ref = doc(db, "garlic-leaderboard", user.uid);  
-      const snap = await getDoc(ref);  
-      if (!snap.exists()) {  
-        await setDoc(ref, { name: user.displayName, garlic: 0, money: 100 });  
-        garlicCount.textContent = 0;  
-        moneyCount.textContent = 100;  
-      } else {  
-        const data = snap.data();  
-        garlicCount.textContent = data.garlic;  
-        moneyCount.textContent = data.money;  
-      }  
-    }  
-  
-    async function loadTopLists() {  
-      const garlicDiv = document.getElementById("top-garlic");  
-      const moneyDiv = document.getElementById("top-money");  
-  
-      try {  
-        const ref = collection(db, "garlic-leaderboard");  
-  
-        const garlicQ = query(ref, orderBy("garlic", "desc"), limit(10));  
-        const moneyQ = query(ref, orderBy("money", "desc"), limit(10));  
-  
-        const garlicSnap = await getDocs(garlicQ);  
-        const moneySnap = await getDocs(moneyQ);  
-  
-        garlicDiv.innerHTML = "<ol>" + garlicSnap.docs.map(doc => `<li>${doc.data().name}: ${doc.data().garlic}</li>`).join("") + "</ol>";  
-        moneyDiv.innerHTML = "<ol>" + moneySnap.docs.map(doc => `<li>${doc.data().name}: $${doc.data().money}</li>`).join("") + "</ol>";  
-      } catch (e) {  
-        garlicDiv.textContent = moneyDiv.textContent = "Błąd ładowania top list.";  
-        console.error(e);  
-      }  
-    }  
-  
-    loadTopLists();  
-  
-    document.querySelectorAll('.tab').forEach(tab => {  
-      tab.addEventListener('click', () => {  
-        if ((tab.dataset.tab === 'market' || tab.dataset.tab === 'farm') && !currentUser) return;  
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));  
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));  
-        tab.classList.add('active');  
-        document.getElementById(tab.dataset.tab).classList.remove('hidden');  
-      });  
-    });  
-  
-    document.querySelectorAll('.subtab').forEach(tab => {  
-      tab.addEventListener('click', () => {  
-        document.querySelectorAll('.subtab').forEach(t => t.classList.remove('active'));  
-        document.querySelectorAll('.subtab-content').forEach(c => c.classList.add('hidden'));  
-        tab.classList.add('active');  
-        document.getElementById(tab.dataset.subtab).classList.remove('hidden');  
-      });  
-    });  
-  </script></body>  
-</html>  
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Garlic Trader</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #f5f5f5;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .tabs, .subtabs {
+      display: flex;
+      overflow-x: auto;
+      margin-bottom: 10px;
+    }
+    .tab, .subtab {
+      background: #333;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active, .subtab.active {
+      background: #ffd700;
+      color: #000;
+    }
+    .content {
+      background: #222;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+    }
+    .hidden {
+      display: none;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .status {
+      font-size: 16px;
+    }
+    .button {
+      background: #ffd700;
+      color: #000;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: #222;
+      padding: 20px;
+      border-radius: 12px;
+      width: 300px;
+      box-sizing: border-box;
+      color: #f5f5f5;
+      position: relative;
+    }
+    .modal h2 {
+      margin-top: 0;
+    }
+    .modal label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    .modal input, .modal select {
+      width: 100%;
+      padding: 6px;
+      border-radius: 6px;
+      border: none;
+      box-sizing: border-box;
+    }
+    .modal button {
+      margin-top: 15px;
+      width: 100%;
+      padding: 10px;
+      background: #ffd700;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .modal-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #ffd700;
+      font-size: 20px;
+    }
+    /* Offers list */
+    .offer {
+      background: #333;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .offer-details {
+      flex-grow: 1;
+    }
+    .offer button {
+      background: #ffd700;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 6px 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="status">
+      🧄 Czosnek: <span id="garlic-count">-</span> | 💵 $: <span id="money-count">-</span>
+    </div>
+    <div>
+      <button class="button" id="login-btn">Zaloguj się</button>
+      <button class="button hidden" id="logout-btn">Wyloguj się</button>
+    </div>
+  </div>
+  <h1>Garlic Trader🧄</h1>
+
+  <div class="tabs" id="mainTabs">
+    <div class="tab" data-tab="market">Market</div>
+    <div class="tab" data-tab="farm">Farma</div>
+    <div class="tab active" data-tab="toplist">Top listy</div>
+  </div>
+
+  <div class="content">
+    <div id="market" class="tab-content hidden">
+      <div class="subtabs">
+        <div class="subtab active" data-subtab="buy">Kupię</div>
+        <div class="subtab" data-subtab="sell">Sprzedam</div>
+      </div>
+
+      <!-- Przycisk dodawania oferty -->
+      <button class="button" id="add-offer-btn">Dodaj ofertę</button>
+
+      <div id="buy" class="subtab-content">
+        <p>🛒 Kup czosnek na rynku!</p>
+        <div id="offers-buy">Ładowanie ofert kupna...</div>
+      </div>
+
+      <div id="sell" class="subtab-content hidden">
+        <p>💰 Sprzedaj swój czosnek innym graczom!</p>
+        <div id="offers-sell">Ładowanie ofert sprzedaży...</div>
+      </div>
+    </div>
+
+    <div id="farm" class="tab-content hidden">
+      <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
+    </div>
+
+    <div id="toplist" class="tab-content">
+      <p>🥇 Top gracze wg ilości czosnku:</p>
+      <div id="top-garlic">Ładowanie...</div>
+      <p>💵 Top gracze wg ilości pieniędzy:</p>
+      <div id="top-money">Ładowanie...</div>
+    </div>
+  </div>
+
+  <!-- Modal dodawania oferty -->
+  <div id="offer-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <span class="modal-close" id="offer-modal-close">&times;</span>
+      <h2>Dodaj ofertę</h2>
+      <form id="offer-form">
+        <label for="offer-type">Typ oferty:</label>
+        <select id="offer-type" required>
+          <option value="buy">Kupię</option>
+          <option value="sell">Sprzedam</option>
+        </select>
+        <label for="offer-name">Nazwa oferty:</label>
+        <input type="text" id="offer-name" required placeholder="Nazwa towaru" />
+        <label for="offer-amount">Ilość:</label>
+        <input type="number" id="offer-amount" min="1" required placeholder="Ilość" />
+        <label for="offer-price">Cena za sztukę ($):</label>
+        <input type="number" id="offer-price" min="0.01" step="0.01" required placeholder="Cena" />
+        <button type="submit">Dodaj ofertę</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal handlu (na razie puste) -->
+  <div id="trade-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <span class="modal-close" id="trade-modal-close">&times;</span>
+      <h2>Handluj</h2>
+      <p>Ta funkcja jest w budowie...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit, addDoc, where } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+    const encodedConfig = {
+      apiKey: "QUl6YVN5Q280RTg4ZUpydW1TcGgxZ3lpelB4TUcybm4yWXlNVng4",
+      authDomain: "Z2llbGRhLTIwMTcyLmZpcmViYXNlYXBwLmNvbQ==",
+      projectId: "Z2llbGRhLTIwMTcy",
+      storageBucket: "Z2llbGRhLTIwMTcyLmFwcHNwb3QuY29t",
+      messagingSenderId: "OTg1NDU1NzcwODA1",
+      appId: "MTo5ODU0NTU3NzA4MDU6d2ViOmE4MGFhZjUzNmE2YTVkMDY0YzUyZmM="
+    };
+    const firebaseConfig = {};
+    for (const key in encodedConfig) {
+      firebaseConfig[key] = atob(encodedConfig[key]);
+    }
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const garlicCount = document.getElementById("garlic-count");
+    const moneyCount = document.getElementById("money-count");
+
+    const addOfferBtn = document.getElementById("add-offer-btn");
+    const offerModal = document.getElementById("offer-modal");
+    const offerModalClose = document.getElementById("offer-modal-close");
+    const offerForm = document.getElementById("offer-form");
+
+    const tradeModal = document.getElementById("trade-modal");
+    const tradeModalClose = document.getElementById("trade-modal-close");
+
+    const offersBuyDiv = document.getElementById("offers-buy");
+    const offersSellDiv = document.getElementById("offers-sell");
+
+    let currentUser = null;
+
+    loginBtn.onclick = async () => {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    };
+
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+    };
+
+    onAuthStateChanged(auth, async user => {
+      const marketTab = document.querySelector('[data-tab="market"]');
+      const farmTab = document.querySelector('[data-tab="farm"]');
+      if (user) {
+        currentUser = user;
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        marketTab.classList.remove("hidden");
+        farmTab.classList.remove("hidden");
+        addOfferBtn.style.display = "inline-block";
+        await loadOrCreatePlayer(user);
+        await loadOffers();
+      } else {
+        currentUser = null;
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        garlicCount.textContent = "-";
+        moneyCount.textContent = "-";
+        marketTab.classList.add("hidden");
+        farmTab.classList.add("hidden");
+        addOfferBtn.style.display = "none";
+        offersBuyDiv.innerHTML = "Zaloguj się, aby zobaczyć oferty.";
+        offersSellDiv.innerHTML = "Zaloguj się, aby zobaczyć oferty.";
+        document.querySelector('[data-tab="toplist"]').click();
+      }
+    });
+
+    async function loadOrCreatePlayer(user) {
+      const ref = doc(db, "garlic-leaderboard", user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { name: user.displayName, garlic: 0, money: 100 });
+        garlicCount.textContent = 0;
+        moneyCount.textContent = 100;
+      } else {
+        const data = snap.data();
+        garlicCount.textContent = data.garlic;
+        moneyCount.textContent = data.money;
+      }
+    }
+
+    async function loadTopLists() {
+      const garlicDiv = document.getElementById("top-garlic");
+      const moneyDiv = document.getElementById("top-money");
+
+      try {
+        const ref = collection(db, "garlic-leaderboard");
+
+        const garlicQ = query(ref, orderBy("garlic", "desc"), limit(10));
+        const moneyQ = query(ref, orderBy("money", "desc"), limit(10));
+
+        const garlicSnap = await getDocs(garlicQ);
+        const moneySnap = await getDocs(moneyQ);
+
+        garlicDiv.innerHTML = "<ol>" + garlicSnap.docs.map(doc => `<li>${doc.data().name}: ${doc.data().garlic}</li>`).join("") + "</ol>";
+        moneyDiv.innerHTML = "<ol>" + moneySnap.docs.map(doc => `<li>${doc.data().name}: $${doc.data().money}</li>`).join("") + "</ol>";
+      } catch (e) {
+        garlicDiv.textContent = moneyDiv.textContent = "Błąd ładowania top list.";
+        console.error(e);
+      }
+    }
+
+    // Ładuj top listy od razu
+    loadTopLists();
+
+    // Tab switching logic
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        if ((tab.dataset.tab === 'market' || tab.dataset.tab === 'farm') && !currentUser) return;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    document.querySelectorAll('.subtab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.subtab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.subtab-content').forEach(c => c.classList.add('hidden'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.subtab).classList.remove('hidden');
+      });
+    });
+
+    // Obsługa modala dodawania oferty
+    addOfferBtn.addEventListener('click', () => {
+      if (!currentUser) return alert("Zaloguj się, aby dodać ofertę.");
+      offerForm.reset();
+      // Ustaw typ oferty w modalu wg aktualnej subtaba (buy/sell)
+      const activeSubtab = document.querySelector('.subtab.active').dataset.subtab;
+      document.getElementById("offer-type").value = activeSubtab;
+      offerModal.classList.remove('hidden');
+    });
+
+    offerModalClose.addEventListener('click', () => {
+      offerModal.classList.add('hidden');
+    });
+
+    offerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) return alert("Zaloguj się, aby dodać ofertę.");
+
+      const type = document.getElementById("offer-type").value;
+      const name = document.getElementById("offer-name").value.trim();
+      const amount = parseInt(document.getElementById("offer-amount").value, 10);
+      const price = parseFloat(document.getElementById("offer-price").value);
+
+      if (!name || amount <= 0 || price <= 0) {
+        return alert("Proszę podać poprawne dane.");
+      }
+
+      try {
+        await addDoc(collection(db, "offers"), {
+          userId: currentUser.uid,
+          userName: currentUser.displayName,
+          type, // "buy" lub "sell"
+          name,
+          amount,
+          price,
+          createdAt: new Date()
+        });
+        alert("Oferta dodana!");
+        offerModal.classList.add('hidden');
+        loadOffers(); // odśwież listę ofert
+      } catch (error) {
+        console.error(error);
+        alert("Błąd podczas dodawania oferty.");
+      }
+    });
+
+    // Ładowanie ofert z Firestore i wyświetlanie ich
+    async function loadOffers() {
+      if (!currentUser) {
+        offersBuyDiv.innerHTML = "Zaloguj się, aby zobaczyć oferty.";
+        offersSellDiv.innerHTML = "Zaloguj się, aby zobaczyć oferty.";
+        return;
+      }
+
+      offersBuyDiv.textContent = "Ładowanie...";
+      offersSellDiv.textContent = "Ładowanie...";
+
+      try {
+        const offersRef = collection(db, "offers");
+
+        // Kupno
+        const buyQuery = query(offersRef, where("type", "==", "buy"), orderBy("createdAt", "desc"), limit(20));
+        // Sprzedaż
+        const sellQuery = query(offersRef, where("type", "==", "sell"), orderBy("createdAt", "desc"), limit(20));
+
+        const [buySnap, sellSnap] = await Promise.all([getDocs(buyQuery), getDocs(sellQuery)]);
+
+        // Wyświetl kupię
+        if (buySnap.empty) {
+          offersBuyDiv.innerHTML = "<p>Brak ofert kupna.</p>";
+        } else {
+          offersBuyDiv.innerHTML = "";
+          buySnap.forEach(doc => {
+            const data = doc.data();
+            const offerEl = createOfferElement(doc.id, data);
+            offersBuyDiv.appendChild(offerEl);
+          });
+        }
+
+        // Wyświetl sprzedam
+        if (sellSnap.empty) {
+          offersSellDiv.innerHTML = "<p>Brak ofert sprzedaży.</p>";
+        } else {
+          offersSellDiv.innerHTML = "";
+          sellSnap.forEach(doc => {
+            const data = doc.data();
+            const offerEl = createOfferElement(doc.id, data);
+            offersSellDiv.appendChild(offerEl);
+          });
+        }
+      } catch (e) {
+        offersBuyDiv.textContent = "Błąd ładowania ofert.";
+        offersSellDiv.textContent = "Błąd ładowania ofert.";
+        console.error(e);
+      }
+    }
+
+    // Tworzy element oferty z przyciskiem "Handluj"
+    function createOfferElement(id, data) {
+      const div = document.createElement("div");
+      div.className = "offer";
+
+      const details = document.createElement("div");
+      details.className = "offer-details";
+      details.textContent = `${data.userName} chce ${data.type === "buy" ? "kupić" : "sprzedać"} "${data.name}" — ilość: ${data.amount}, cena: $${data.price.toFixed(2)}`;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Handluj";
+      btn.onclick = () => openTradeModal(id, data);
+
+      div.appendChild(details);
+      div.appendChild(btn);
+      return div;
+    }
+
+    // Otwiera modal handlu (na razie tylko pokazuje)
+    function openTradeModal(id, data) {
+      tradeModal.classList.remove("hidden");
+      // Możesz tu rozbudować modal o formularz realizacji transakcji
+      // Na razie tylko info i przycisk zamknięcia
+    }
+
+    tradeModalClose.addEventListener("click", () => {
+      tradeModal.classList.add("hidden");
+    });
+
+    // Na start ustaw aktywną zakładkę i subtab (toplist i kupię)
+    document.querySelector('.tab.active').click();
+    document.querySelector('.subtab.active').click();
+
+  </script>
+</body>
+</html>
