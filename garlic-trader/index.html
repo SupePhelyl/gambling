@@ -339,6 +339,16 @@
         moneyCount.textContent = data.money;
       }
     }
+    
+    async function changeStats(user, moneyAm, garlicAm) {
+      const ref = doc(db, "garlic-leaderboard", user.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      await setDoc(ref, { name: user.displayName, garlic: (garlicAm+data.garlic), money: (moneyAm*data.money) });
+      const data = snap.data();
+      garlicCount.textContent = data.garlic;
+      moneyCount.textContent = data.money;
+    }
 
     async function loadTopLists() {
       const garlicDiv = document.getElementById("top-garlic");
@@ -410,6 +420,8 @@
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
+      if (type==="sell") changeStats(currentUser, -1 * amount, 0};
+      if (type==="buy") changeStats(currentUser, 0, -1 * amount * price);
 
       try {
         await addDoc(collection(db, "offers"), {
@@ -575,6 +587,9 @@
         deleteBtn.style.marginTop = "6px";
         deleteBtn.onclick = async () => {
           if (confirm("Na pewno chcesz usunąć tę ofertę?")) {
+            const ref = doc(db, "offers", id);
+            const snap = await getDoc(ref);
+            const data = snap.data();
             try {
               await deleteDoc(doc(db, "offers", id));
               loadOffers();
