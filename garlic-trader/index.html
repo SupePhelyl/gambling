@@ -51,6 +51,36 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      margin-top: 5px;
+    }
+    .offer {
+      background: #333;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 8px;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: #222;
+      padding: 20px;
+      border-radius: 12px;
+      width: 300px;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-bottom: 10px;
+      background: #111;
+      border: 1px solid #555;
+      color: #fff;
+      border-radius: 6px;
     }
   </style>
 </head>
@@ -64,8 +94,8 @@
       <button class="button hidden" id="logout-btn">Wyloguj się</button>
     </div>
   </div>  <h1>Garlic Trader🧄</h1>  <div class="tabs" id="mainTabs">
-    <div class="tab" data-tab="market">Market</div>
-    <div class="tab" data-tab="farm">Farma</div>
+    <div class="tab hidden" data-tab="market">Market</div>
+    <div class="tab hidden" data-tab="farm">Farma</div>
     <div class="tab active" data-tab="toplist">Top listy</div>
   </div>  <div class="content">
     <div id="market" class="tab-content hidden">
@@ -74,10 +104,12 @@
         <div class="subtab" data-subtab="sell">Sprzedam</div>
       </div>
       <div id="buy" class="subtab-content">
-        <p>🛒 Kup czosnek na rynku!</p>
+        <button class="button" onclick="openOfferForm('buy')">Dodaj ofertę kupna</button>
+        <div id="buy-offers"></div>
       </div>
       <div id="sell" class="subtab-content hidden">
-        <p>💰 Sprzedaj swój czosnek innym graczom!</p>
+        <button class="button" onclick="openOfferForm('sell')">Dodaj ofertę sprzedaży</button>
+        <div id="sell-offers"></div>
       </div>
     </div><div id="farm" class="tab-content hidden">
   <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
@@ -90,9 +122,18 @@
   <div id="top-money">Ładowanie...</div>
 </div>
 
+  </div>  <div id="offer-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Dodaj ofertę</h3>
+      <input id="offer-name" placeholder="Nazwa oferty">
+      <input id="offer-amount" type="number" placeholder="Ilość">
+      <input id="offer-price" type="number" placeholder="Cena jednostkowa">
+      <button class="button" onclick="submitOffer()">Zapisz</button>
+      <button class="button" onclick="closeOfferForm()">Anuluj</button>
+    </div>
   </div>  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
     const encodedConfig = {
@@ -116,8 +157,11 @@
     const logoutBtn = document.getElementById("logout-btn");
     const garlicCount = document.getElementById("garlic-count");
     const moneyCount = document.getElementById("money-count");
+    const marketTab = document.querySelector('[data-tab="market"]');
+    const farmTab = document.querySelector('[data-tab="farm"]');
 
     let currentUser = null;
+    let offerType = "buy";
 
     loginBtn.onclick = async () => {
       const provider = new GoogleAuthProvider();
@@ -129,8 +173,6 @@
     };
 
     onAuthStateChanged(auth, async user => {
-      const marketTab = document.querySelector('[data-tab="market"]');
-      const farmTab = document.querySelector('[data-tab="farm"]');
       if (user) {
         currentUser = user;
         loginBtn.classList.add("hidden");
@@ -138,6 +180,7 @@
         marketTab.classList.remove("hidden");
         farmTab.classList.remove("hidden");
         await loadOrCreatePlayer(user);
+        await loadOffers();
       } else {
         currentUser = null;
         loginBtn.classList.remove("hidden");
@@ -146,7 +189,6 @@
         moneyCount.textContent = "-";
         marketTab.classList.add("hidden");
         farmTab.classList.add("hidden");
-        document.querySelector('[data-tab="toplist"]').click();
       }
     });
 
@@ -167,16 +209,12 @@
     async function loadTopLists() {
       const garlicDiv = document.getElementById("top-garlic");
       const moneyDiv = document.getElementById("top-money");
-
       try {
         const ref = collection(db, "garlic-leaderboard");
-
         const garlicQ = query(ref, orderBy("garlic", "desc"), limit(10));
         const moneyQ = query(ref, orderBy("money", "desc"), limit(10));
-
         const garlicSnap = await getDocs(garlicQ);
         const moneySnap = await getDocs(moneyQ);
-
         garlicDiv.innerHTML = "<ol>" + garlicSnap.docs.map(doc => `<li>${doc.data().name}: ${doc.data().garlic}</li>`).join("") + "</ol>";
         moneyDiv.innerHTML = "<ol>" + moneySnap.docs.map(doc => `<li>${doc.data().name}: $${doc.data().money}</li>`).join("") + "</ol>";
       } catch (e) {
@@ -185,11 +223,50 @@
       }
     }
 
+    async function loadOffers() {
+      const offers = await getDocs(collection(db, "offers"));
+      const buyDiv = document.getElementById("buy-offers");
+      const sellDiv = document.getElementById("sell-offers");
+      buyDiv.innerHTML = "";
+      sellDiv.innerHTML = "";
+      offers.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "offer";
+        div.innerHTML = `<strong>${data.name}</strong><br>Ilość: ${data.amount} | Cena: $${data.price} <br><button class="button">Handluj</button>`;
+        (data.type === "buy" ? buyDiv : sellDiv).appendChild(div);
+      });
+    }
+
+    window.openOfferForm = (type) => {
+      offerType = type;
+      document.getElementById("offer-modal").classList.remove("hidden");
+    };
+
+    window.closeOfferForm = () => {
+      document.getElementById("offer-modal").classList.add("hidden");
+    };
+
+    window.submitOffer = async () => {
+      const name = document.getElementById("offer-name").value;
+      const amount = parseInt(document.getElementById("offer-amount").value);
+      const price = parseFloat(document.getElementById("offer-price").value);
+      if (!name || isNaN(amount) || isNaN(price)) return;
+      await addDoc(collection(db, "offers"), {
+        uid: currentUser.uid,
+        name,
+        amount,
+        price,
+        type: offerType
+      });
+      closeOfferForm();
+      await loadOffers();
+    };
+
     loadTopLists();
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        if ((tab.dataset.tab === 'market' || tab.dataset.tab === 'farm') && !currentUser) return;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         tab.classList.add('active');
