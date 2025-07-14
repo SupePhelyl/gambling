@@ -573,13 +573,11 @@
               if (newType==="sell"){
                 await changeStats(currentUser, data.amount - newAmount, 0);
               } else if (newType==="buy"){
-                await changeStats(currentUser, data.amount, 0);
-                await changeStats(currentUser, 0, -1 * newAmount * newPrice);
+                await changeStats(currentUser, data.amount, -1 * newAmount * newPrice);
               }
             } else if (data.type==="buy"){
-              if (newType==="sell"){
-                await changeStats(currentUser, 0, data.amount * data.price);
-                await changeStats(currentUser, -1 * newAmount, 0);
+              if (newType==="sell") {
+                await changeStats(currentUser, -1 * newAmount, data.amount * data.price);
               } else if (newType==="buy"){
                 await changeStats(currentUser, 0, (data.amount * data.price) - (newAmount * newPrice));
               }
