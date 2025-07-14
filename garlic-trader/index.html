@@ -536,7 +536,7 @@
       const tradeBtn = document.createElement("button");
       tradeBtn.textContent = "Handluj";
       tradeBtn.onclick = () => {
-        tradeModal.classList.remove("hidden");
+        openTradeModal(id, data);
       };
       actions.appendChild(tradeBtn);
     
