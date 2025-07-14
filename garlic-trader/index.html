@@ -242,6 +242,7 @@
   </div>
 
   <script type="module">
+    import { deleteDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit, addDoc, where } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
@@ -484,7 +485,6 @@
       nameEl.className = "offer-name";
       nameEl.textContent = data.name.toUpperCase();
     
-      // Typ oferty i odpowiednie słowa
       const action = data.type === "buy" ? "kupić" : "sprzedać";
       const amountLabel = data.type === "buy" ? "Zapotrzebowanie" : "Zapas";
     
@@ -494,25 +494,97 @@
     
       const priceEl = document.createElement("div");
       priceEl.className = "offer-price";
-      priceEl.textContent = `Cena jednostkowa: $${data.price.toFixed(2)}`;
+      priceEl.textContent = `Cena za sztukę: $${data.price.toFixed(2)}`;
     
       const amountEl = document.createElement("div");
       amountEl.className = "offer-amount";
-      amountEl.textContent = `${amountLabel}: ${data.amount}`;
+      amountEl.textContent = `${amountLabel}: ${data.amount} szt.`;
     
       details.appendChild(nameEl);
       details.appendChild(userEl);
       details.appendChild(priceEl);
       details.appendChild(amountEl);
     
-      const btn = document.createElement("button");
-      btn.textContent = "Handluj";
-      btn.onclick = () => openTradeModal(id, data);
-    
       div.appendChild(details);
-      div.appendChild(btn);
+    
+      const actions = document.createElement("div");
+    
+      // Przycisk handlu
+      const tradeBtn = document.createElement("button");
+      tradeBtn.textContent = "Handluj";
+      tradeBtn.onclick = () => {
+        tradeModal.classList.remove("hidden");
+      };
+      actions.appendChild(tradeBtn);
+    
+      // Jeśli oferta należy do zalogowanego użytkownika, dodaj przyciski Edytuj i Usuń
+      if (currentUser && currentUser.uid === data.userId) {
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edytuj";
+        editBtn.style.marginTop = "6px";
+        editBtn.onclick = async () => {
+          document.getElementById("offer-type").value = data.type;
+          document.getElementById("offer-name").value = data.name;
+          document.getElementById("offer-amount").value = data.amount;
+          document.getElementById("offer-price").value = data.price;
+          offerModal.classList.remove("hidden");
+    
+          // Po kliknięciu zapisu, zaktualizuj zamiast dodawać nową
+          const formClone = offerForm.cloneNode(true);
+          offerForm.replaceWith(formClone);
+    
+          formClone.onsubmit = async (e) => {
+            e.preventDefault();
+            const newType = document.getElementById("offer-type").value;
+            const newName = document.getElementById("offer-name").value.trim();
+            const newAmount = parseInt(document.getElementById("offer-amount").value, 10);
+            const newPrice = parseFloat(document.getElementById("offer-price").value);
+    
+            if (!newName || newAmount <= 0 || newPrice <= 0) {
+              return alert("Proszę podać poprawne dane.");
+            }
+    
+            try {
+              await setDoc(doc(db, "offers", id), {
+                ...data,
+                type: newType,
+                name: newName,
+                amount: newAmount,
+                price: newPrice,
+                createdAt: new Date() // lub zachowaj poprzedni czas jeśli wolisz
+              });
+              offerModal.classList.add("hidden");
+              loadOffers();
+            } catch (error) {
+              console.error(error);
+              alert("Błąd podczas edycji oferty.");
+            }
+          };
+        };
+    
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Usuń";
+        deleteBtn.style.marginTop = "6px";
+        deleteBtn.onclick = async () => {
+          if (confirm("Na pewno chcesz usunąć tę ofertę?")) {
+            try {
+              await deleteDoc(doc(db, "offers", id));
+              loadOffers();
+            } catch (err) {
+              console.error(err);
+              alert("Błąd podczas usuwania oferty.");
+            }
+          }
+        };
+    
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+      }
+    
+      div.appendChild(actions);
       return div;
     }
+
 
 
     // Otwiera modal handlu (na razie tylko pokazuje)
