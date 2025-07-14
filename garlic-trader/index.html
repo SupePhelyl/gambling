@@ -401,62 +401,34 @@
     offerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!currentUser) return alert("Zaloguj się, aby dodać ofertę.");
-    
+
       const type = document.getElementById("offer-type").value;
       const name = document.getElementById("offer-name").value.trim();
       const amount = parseInt(document.getElementById("offer-amount").value, 10);
       const price = parseFloat(document.getElementById("offer-price").value);
-    
+
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
-    
-      // Pobierz zasoby użytkownika
-      const userRef = doc(db, "garlic-leaderboard", currentUser.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return alert("Brak danych użytkownika.");
-    
-      const userData = userSnap.data();
-    
-      // Sprawdź i zmodyfikuj zasoby w zależności od typu oferty
-      if (type === "sell") {
-        // Sprzedaż - zmniejsz czosnek
-        if (userData.garlic < amount) {
-          return alert("Nie masz tyle czosnku.");
-        }
-        await setDoc(userRef, { garlic: userData.garlic - amount }, { merge: true });
-      } else {
-        // Kupno - zmniejsz pieniądze
-        const cost = amount * price;
-        if (userData.money < cost) {
-          return alert("Nie masz tyle pieniędzy.");
-        }
-        await setDoc(userRef, { money: userData.money - cost }, { merge: true });
-      }
-    
+
       try {
         await addDoc(collection(db, "offers"), {
           userId: currentUser.uid,
           userName: currentUser.displayName,
-          type,
+          type, // "buy" lub "sell"
           name,
           amount,
           price,
           createdAt: new Date()
         });
-    
-        // Odśwież zasoby i oferty
-        garlicCount.textContent = type === "sell" ? userData.garlic - amount : userData.garlic;
-        moneyCount.textContent = type === "buy" ? userData.money - (amount * price) : userData.money;
-    
+        
         offerModal.classList.add('hidden');
-        loadOffers();
+        loadOffers(); // odśwież listę ofert
       } catch (error) {
-        alert("Błąd podczas dodawania oferty.");
         console.error(error);
+        alert("Błąd podczas dodawania oferty.");
       }
     });
-
 
     // Ładowanie ofert z Firestore i wyświetlanie ich
     async function loadOffers() {
@@ -571,105 +543,50 @@
     
           formClone.onsubmit = async (e) => {
             e.preventDefault();
-          
             const newType = document.getElementById("offer-type").value;
             const newName = document.getElementById("offer-name").value.trim();
             const newAmount = parseInt(document.getElementById("offer-amount").value, 10);
             const newPrice = parseFloat(document.getElementById("offer-price").value);
-          
+    
             if (!newName || newAmount <= 0 || newPrice <= 0) {
               return alert("Proszę podać poprawne dane.");
             }
-          
-            // Pobierz użytkownika i starą ofertę
-            const userRef = doc(db, "garlic-leaderboard", currentUser.uid);
-            const userSnap = await getDoc(userRef);
-            if (!userSnap.exists()) return alert("Brak danych użytkownika.");
-          
-            const userData = userSnap.data();
-          
-            const offerRef = doc(db, "offers", id);
-            const offerSnap = await getDoc(offerRef);
-            if (!offerSnap.exists()) return alert("Oferta już nie istnieje.");
-          
-            const oldOffer = offerSnap.data();
-          
-            // Oblicz różnicę w zasobach
-            // Najpierw zwróć stare zasoby
-            if (oldOffer.type === "sell") {
-              userData.garlic += oldOffer.amount;
-            } else {
-              userData.money += oldOffer.amount * oldOffer.price;
+    
+            try {
+              await setDoc(doc(db, "offers", id), {
+                ...data,
+                type: newType,
+                name: newName,
+                amount: newAmount,
+                price: newPrice,
+                createdAt: new Date() // lub zachowaj poprzedni czas jeśli wolisz
+              });
+              offerModal.classList.add("hidden");
+              loadOffers();
+            } catch (error) {
+              console.error(error);
+              alert("Błąd podczas edycji oferty.");
             }
-          
-            // Teraz zabierz nowe zasoby
-            if (newType === "sell") {
-              if (userData.garlic < newAmount) return alert("Nie masz tyle czosnku.");
-              userData.garlic -= newAmount;
-            } else {
-              const cost = newAmount * newPrice;
-              if (userData.money < cost) return alert("Nie masz tyle pieniędzy.");
-              userData.money -= cost;
-            }
-          
-            // Zaktualizuj zasoby i ofertę
-            await setDoc(userRef, { garlic: userData.garlic, money: userData.money }, { merge: true });
-          
-            await setDoc(offerRef, {
-              type: newType,
-              name: newName,
-              amount: newAmount,
-              price: newPrice,
-              updatedAt: new Date()
-            }, { merge: true });
-          
-            garlicCount.textContent = userData.garlic;
-            moneyCount.textContent = userData.money;
-          
-            offerModal.classList.add("hidden");
-            loadOffers();
           };
-
+        };
     
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Usuń";
+        deleteBtn.style.marginTop = "6px";
         deleteBtn.onclick = async () => {
-          if (!confirm("Czy na pewno chcesz usunąć tę ofertę?")) return;
-        
-          // Pobierz dane użytkownika i oferty
-          const offerRef = doc(db, "offers", id);
-          const offerSnap = await getDoc(offerRef);
-          if (!offerSnap.exists()) return alert("Oferta już nie istnieje.");
-        
-          const offerData = offerSnap.data();
-          const userRef = doc(db, "garlic-leaderboard", offerData.userId);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) return alert("Brak danych użytkownika.");
-        
-          const userData = userSnap.data();
-        
-          // Przywróć zasoby
-          if (offerData.type === "sell") {
-            // Zwrot czosnku
-            await setDoc(userRef, { garlic: userData.garlic + offerData.amount }, { merge: true });
-          } else {
-            // Zwrot pieniędzy
-            const refund = offerData.amount * offerData.price;
-            await setDoc(userRef, { money: userData.money + refund }, { merge: true });
+          if (confirm("Na pewno chcesz usunąć tę ofertę?")) {
+            try {
+              await deleteDoc(doc(db, "offers", id));
+              loadOffers();
+            } catch (err) {
+              console.error(err);
+              alert("Błąd podczas usuwania oferty.");
+            }
           }
-        
-          // Usuń ofertę
-          await deleteDoc(offerRef);
-        
-          // Odśwież zasoby i oferty
-          garlicCount.textContent = userData.garlic + (offerData.type === "sell" ? offerData.amount : 0);
-          moneyCount.textContent = userData.money + (offerData.type === "buy" ? offerData.amount * offerData.price : 0);
-        
-          loadOffers();
         };
-        actions.appendChild(deleteBtn);
+    
         actions.appendChild(editBtn);
-        
+        actions.appendChild(deleteBtn);
       }
     
       div.appendChild(actions);
