@@ -341,12 +341,13 @@
     }
     
     async function changeStats(user, garlicAm, moneyAm) {
-      alert("x");
+      alert(moneyAm);
       const ref = doc(db, "garlic-leaderboard", user.uid);
       const snap = await getDoc(ref);
       const data = snap.data();
       let newGar = garlicAm+data.garlic;
       let newMon = moneyAm+data.money;
+      alert(newMon);
       await setDoc(ref, { name: user.displayName, garlic: newGar, money: newMon });
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
