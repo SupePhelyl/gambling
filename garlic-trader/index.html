@@ -422,8 +422,8 @@
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
-      if (type==="sell") changeStats(currentUser, -1 * amount, 0);
-      if (type==="buy") changeStats(currentUser, 0, -1 * amount * price);
+      if (type==="sell") await changeStats(currentUser, -1 * amount, 0);
+      if (type==="buy") await changeStats(currentUser, 0, -1 * amount * price);
 
       try {
         await addDoc(collection(db, "offers"), {
@@ -583,7 +583,7 @@
                 changeStats(currentUser, 0, (data.amount * data.price) - (newAmount * newPrice));
               }
             }
-            if (data.type==="buy") changeStats(currentUser, 0, data.amount * data.price);
+            if (data.type==="buy") await changeStats(currentUser, 0, data.amount * data.price);
     
             try {
               await setDoc(doc(db, "offers", id), {
@@ -611,8 +611,8 @@
             const ref = doc(db, "offers", id);
             const snap = await getDoc(ref);
             const data = snap.data();
-            if (data.type==="sell") changeStats(currentUser, data.amount, 0);
-            if (data.type==="buy") changeStats(currentUser, 0, data.amount * data.price);
+            if (data.type==="sell") await changeStats(currentUser, data.amount, 0);
+            if (data.type==="buy") await changeStats(currentUser, 0, data.amount * data.price);
             try {
               await deleteDoc(doc(db, "offers", id));
               loadOffers();
