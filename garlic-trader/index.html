@@ -564,6 +564,25 @@
             if (!newName || newAmount <= 0 || newPrice <= 0) {
               return alert("Proszę podać poprawne dane.");
             }
+            const ref = doc(db, "offers", id);
+            const snap = await getDoc(ref);
+            const data = snap.data();
+            if (data.type==="sell") {
+              if (newType==="sell"){
+                changeStats(currentUser, data.amount - newAmount, 0);
+              } else {
+                changeStats(currentUser, data.amount, 0);
+                changeStats(currentUser, 0, -1 * newAmount * newPrice);
+              }
+            } else {
+              if (newType==="sell"){
+                changeStats(currentUser, 0, data.amount * data.price);
+                changeStats(currentUser, -1 * newAmount, 0);
+              } else {
+                changeStats(currentUser, 0, (data.amount * data.price) - (newAmount * newPrice);
+              }
+            }
+            if (data.type==="buy") changeStats(currentUser, 0, data.amount * data.price);
     
             try {
               await setDoc(doc(db, "offers", id), {
@@ -580,6 +599,7 @@
               console.error(error);
               alert("Błąd podczas edycji oferty.");
             }
+            location.reload();
           };
         };
     
