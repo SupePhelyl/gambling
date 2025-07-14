@@ -485,7 +485,7 @@
           offersSellDiv.innerHTML = "";
           sellSnap.forEach(doc => {
             const data = doc.data();
-            const offerEl = await createOfferElement(doc.id, data);
+            const offerEl = createOfferElement(doc.id, data);
             offersSellDiv.appendChild(offerEl);
           });
         }
