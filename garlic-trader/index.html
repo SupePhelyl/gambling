@@ -358,7 +358,7 @@
       let newGar = garlicAm+data.garlic;
       let newMon = moneyAm+data.money;
       
-      await setDoc(ref, { name: user.displayName, garlic: newGar, money: newMon });
+      await setDoc(ref, { name: currentUser.displayName, garlic: newGar, money: newMon });
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
     }
