@@ -343,11 +343,11 @@
         moneyCount.textContent = data.money;
       }
     }
-    async function getFireData(storeId, user, typ) {
+    async function getFireData(storeId, user) {
       const ref = doc(db, storeId, user);
       const snap = await getDoc(ref);
       const data = snap.data();
-      return data.typ;
+      return data;
     }
     
     async function changeStats(user, garlicAm, moneyAm) {
@@ -651,7 +651,8 @@
       });
       tradeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        alert(getFireData("garlic-leaderboard",data.userId, garlic));
+        let firedata = await getFireData("garlic-leaderboard",data.userId);
+        alert(firedata.garlic);
       });
     }
 
