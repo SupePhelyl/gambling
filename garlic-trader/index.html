@@ -652,7 +652,7 @@
       tradeForm.addEventListener("submit", () => {
         let firedata = await getFireData("garlic-leaderboard", data.userId);
         alert(firedata.money);
-        let firedata = await getFireData("garlic-leaderboard", data.userName);
+        firedata = await getFireData("garlic-leaderboard", data.userName);
         alert(firedata.money);
       });
     }
