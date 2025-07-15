@@ -344,9 +344,12 @@
       }
     }
     async function getFireData(storeId, user) {
+      alert("Pobierz dane " + user + " z bazy " + storeId);
       const ref = doc(db, storeId, user);
       const snap = await getDoc(ref);
       const data = snap.data();
+      alert(data);
+      alert(data.garlic);
       return data;
     }
     
