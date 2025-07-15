@@ -343,6 +343,12 @@
         moneyCount.textContent = data.money;
       }
     }
+    async function getFireData(storeId, user) {
+      const ref = doc(db, storeId, user.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      return data;
+    }
     
     async function changeStats(user, garlicAm, moneyAm) {
       
@@ -637,11 +643,17 @@
 
 
     // Otwiera modal handlu (na razie tylko pokazuje)
-    function openTradeModal(id, data) {
+    async function openTradeModal(id, data) {
       tradeModal.classList.remove("hidden");
       tradeQ.addEventListener("input", () => {
         let textdis = (data.price * tradeQ.value).toString();
         priceLabel.textContent = "Cena: $" + textdis;
+      });
+      tradeForm.addEventListener("submit", () => {
+        let firedata = await getFireData("garlic-leaderboard", data.userId);
+        alert(firedata.money);
+        let firedata = await getFireData("garlic-leaderboard", data.userName);
+        alert(firedata.money);
       });
     }
 
