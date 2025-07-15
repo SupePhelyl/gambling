@@ -651,10 +651,8 @@
       });
       tradeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        let firedata = await getFireData("garlic-leaderboard", data.userId);
-        alert(firedata.money);
-        firedata = await getFireData("garlic-leaderboard", data.userName);
-        alert(firedata.money);
+        alert(data.userId);
+        alert(data.userName.uid);
       });
     }
 
