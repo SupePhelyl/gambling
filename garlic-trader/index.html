@@ -355,8 +355,8 @@
       const ref = doc(db, "garlic-leaderboard", user);
       const snap = await getDoc(ref);
       const data = snap.data();
-      let newGar = garlicAm+data.garlic;
-      let newMon = moneyAm+data.money;
+      let newGar = parseInt(garlicAm,10)+parseInt(data.garlic,10);
+      let newMon = parseInt(moneyAm,10)+parseInt(data.money,10);
       
       await setDoc(ref, { name: currentUser.displayName, garlic: newGar, money: newMon });
       garlicCount.textContent = newGar;
