@@ -649,8 +649,7 @@
         let textdis = (data.price * tradeQ.value).toString();
         priceLabel.textContent = "Cena: $" + textdis;
       });
-      tradeForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      tradeForm.addEventListener("submit", async () => {
         if (data.type==="sell"){
           await changeStats(currentUser.uid, tradeQ.value, -1 * data.price * tradeQ.value);
           await changeStats(data.userId, 0, data.price * tradeQ.value);
