@@ -652,7 +652,9 @@
       tradeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         alert(data.userId);
-        alert(data.userName.uid);
+        alert((data.userName).uid);
+        alert(currentUser);
+        alert(currentUser.uid);
       });
     }
 
