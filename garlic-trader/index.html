@@ -352,7 +352,7 @@
     
     async function changeStats(user, garlicAm, moneyAm) {
       
-      const ref = doc(db, "garlic-leaderboard", user.uid);
+      const ref = doc(db, "garlic-leaderboard", user);
       const snap = await getDoc(ref);
       const data = snap.data();
       let newGar = garlicAm+data.garlic;
@@ -433,8 +433,8 @@
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
-      if (type==="sell") await changeStats(currentUser, -1 * amount, 0);
-      if (type==="buy") await changeStats(currentUser, 0, -1 * amount * price);
+      if (type==="sell") await changeStats(currentUser.uid, -1 * amount, 0);
+      if (type==="buy") await changeStats(currentUser.uid, 0, -1 * amount * price);
 
       try {
         await addDoc(collection(db, "offers"), {
@@ -581,15 +581,15 @@
             const data = snap.data();
             if (data.type==="sell") {
               if (newType==="sell"){
-                await changeStats(currentUser, data.amount - newAmount, 0);
+                await changeStats(currentUser.uid, data.amount - newAmount, 0);
               } else if (newType==="buy"){
-                await changeStats(currentUser, data.amount, -1 * newAmount * newPrice);
+                await changeStats(currentUser.uid, data.amount, -1 * newAmount * newPrice);
               }
             } else if (data.type==="buy"){
               if (newType==="sell") {
-                await changeStats(currentUser, -1 * newAmount, data.amount * data.price);
+                await changeStats(currentUser.uid, -1 * newAmount, data.amount * data.price);
               } else if (newType==="buy"){
-                await changeStats(currentUser, 0, (data.amount * data.price) - (newAmount * newPrice));
+                await changeStats(currentUser.uid, 0, (data.amount * data.price) - (newAmount * newPrice));
               }
             }
     
@@ -619,8 +619,8 @@
             const ref = doc(db, "offers", id);
             const snap = await getDoc(ref);
             const data = snap.data();
-            if (data.type==="sell") await changeStats(currentUser, data.amount, 0);
-            if (data.type==="buy") await changeStats(currentUser, 0, data.amount * data.price);
+            if (data.type==="sell") await changeStats(currentUser.uid, data.amount, 0);
+            if (data.type==="buy") await changeStats(currentUser.uid, 0, data.amount * data.price);
             try {
               await deleteDoc(doc(db, "offers", id));
               loadOffers();
@@ -643,14 +643,32 @@
 
 
     // Otwiera modal handlu (na razie tylko pokazuje)
-    function openTradeModal(id, data) {
+    async function openTradeModal(id, data) {
       tradeModal.classList.remove("hidden");
       tradeQ.addEventListener("input", () => {
         let textdis = (data.price * tradeQ.value).toString();
         priceLabel.textContent = "Cena: $" + textdis;
       });
       tradeForm.addEventListener("submit", async () => {
-        
+        if (data.type==="sell"){
+          await changeStats(currentUser.uid, tradeQ.value, -1 * data.price * tradeQ.value);
+          await changeStats(data.userId, 0, data.price * tradeQ.value);
+        } else {
+          await changeStats(currentUser.uid, -1 * tradeQ.value, data.price * tradeQ.value);
+          await changeStats(data.userId, tradeQ.value, 0);
+        }
+        let newAmo = data.amount - tradeQ.value;
+        await setDoc(doc(db, "offers", id), {
+          ...data,
+          type: data.type,
+          name: data.name,
+          amount: newAmo,
+          price: data.price,
+          createdAt: data.createdAt
+        });
+        if (newAmo===0){
+          deleteDoc(doc(db, "offers", id));
+        }
       });
     }
 
