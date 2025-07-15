@@ -344,7 +344,7 @@
       }
     }
     async function getFireData(storeId, user) {
-      const ref = doc(db, storeId, user.uid);
+      const ref = doc(db, storeId, user);
       const snap = await getDoc(ref);
       const data = snap.data();
       return data;
@@ -651,10 +651,7 @@
       });
       tradeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        alert(data.userId);
-        alert((data.userName).uid);
-        alert(currentUser);
-        alert(currentUser.uid);
+        alert(getFireData("garlic-leaderboard",data.userId).garlic);
       });
     }
 
