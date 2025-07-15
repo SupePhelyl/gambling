@@ -347,8 +347,6 @@
       const ref = doc(db, storeId, user);
       const snap = await getDoc(ref);
       const data = snap.data();
-      
-      alert("czosnek: "+data.garlic);
       return data;
     }
     
@@ -653,7 +651,7 @@
       });
       tradeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        alert(getFireData("garlic-leaderboard",data.userId).garlic);
+        alert((getFireData("garlic-leaderboard",data.userId)).garlic);
       });
     }
 
