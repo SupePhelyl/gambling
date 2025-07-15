@@ -335,7 +335,7 @@
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         await setDoc(ref, { name: user.displayName, garlic: 0, money: 100 });
-        garlicCount.textContent = 0;
+        garlicCount.textContent = 1;
         moneyCount.textContent = 100;
       } else {
         const data = snap.data();
