@@ -308,7 +308,6 @@
       const farmTab = document.querySelector('[data-tab="farm"]');
       if (user) {
         currentUser = user;
-        window.currentUser = currentUser;
         loginBtn.classList.add("hidden");
         logoutBtn.classList.remove("hidden");
         marketTab.classList.remove("hidden");
@@ -684,7 +683,7 @@
     // Na start ustaw aktywną zakładkę i subtab (toplist i kupię)
     document.querySelector('.tab.active').click();
     document.querySelector('.subtab.active').click();
-    window.changeStats = changeStats;
+    
     
 
   </script>
