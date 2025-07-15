@@ -358,7 +358,7 @@
       let newGar = parseInt(garlicAm,10)+parseInt(data.garlic,10);
       let newMon = parseInt(moneyAm,10)+parseInt(data.money,10);
       
-      await setDoc(ref, { name: currentUser.displayName, garlic: newGar, money: newMon });
+      await setDoc(ref, { name: data.name, garlic: newGar, money: newMon });
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
     }
