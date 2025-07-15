@@ -643,13 +643,13 @@
 
 
     // Otwiera modal handlu (na razie tylko pokazuje)
-    async function openTradeModal(id, data) {
+    function openTradeModal(id, data) {
       tradeModal.classList.remove("hidden");
       tradeQ.addEventListener("input", () => {
         let textdis = (data.price * tradeQ.value).toString();
         priceLabel.textContent = "Cena: $" + textdis;
       });
-      tradeForm.addEventListener("submit", () => {
+      tradeForm.addEventListener("submit", async () => {
         let firedata = await getFireData("garlic-leaderboard", data.userId);
         alert(firedata.money);
         firedata = await getFireData("garlic-leaderboard", data.userName);
