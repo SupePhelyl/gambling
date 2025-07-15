@@ -649,7 +649,8 @@
         let textdis = (data.price * tradeQ.value).toString();
         priceLabel.textContent = "Cena: $" + textdis;
       });
-      tradeForm.addEventListener("submit", async () => {
+      tradeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
         if (data.type==="sell"){
           await changeStats(currentUser.uid, tradeQ.value, -1 * data.price * tradeQ.value);
           await changeStats(data.userId, 0, data.price * tradeQ.value);
@@ -657,7 +658,7 @@
           await changeStats(currentUser.uid, -1 * tradeQ.value, data.price * tradeQ.value);
           await changeStats(data.userId, tradeQ.value, 0);
         }
-        let newAmo = data.amount - tradeQ.value;
+        let newAmo = parseInt(data.amount,10) - parseInt(tradeQ.value,10);
         await setDoc(doc(db, "offers", id), {
           ...data,
           type: data.type,
@@ -669,6 +670,7 @@
         if (newAmo===0){
           deleteDoc(doc(db, "offers", id));
         }
+        location.reload();
       });
     }
 
