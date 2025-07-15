@@ -649,7 +649,8 @@
         let textdis = (data.price * tradeQ.value).toString();
         priceLabel.textContent = "Cena: $" + textdis;
       });
-      tradeForm.addEventListener("submit", async () => {
+      tradeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
         let firedata = await getFireData("garlic-leaderboard", data.userId);
         alert(firedata.money);
         firedata = await getFireData("garlic-leaderboard", data.userName);
