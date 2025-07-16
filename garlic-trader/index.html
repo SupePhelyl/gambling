@@ -436,8 +436,9 @@
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
-      let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
-      let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
+      let dejt = await getFireData("garlic-leaderboard", currentUser.uid);
+      let garAm = dejt.garlic;
+      let monAm = dejt.money;
       alert(garAm);
       alert(monAm);
       if (type==="sell") {
