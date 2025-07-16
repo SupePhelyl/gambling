@@ -344,12 +344,9 @@
       }
     }
     async function getFireData(storeId, user) {
-      alert("mam:" + user + "z: " + storeId);
       const ref = doc(db, storeId, user);
       const snap = await getDoc(ref);
       const data = snap.data();
-      alert(data.garlic);
-      alert(data.money);
       return data;
     }
     
@@ -439,8 +436,6 @@
       let dejt = await getFireData("garlic-leaderboard", currentUser.uid);
       let garAm = dejt.garlic;
       let monAm = dejt.money;
-      alert(garAm);
-      alert(monAm);
       if (type==="sell") {
         if (garAm<amount) return alert("Za mało czosnku");
         await changeStats(currentUser.uid, -1 * amount, 0);
@@ -593,8 +588,9 @@
             const ref = doc(db, "offers", id);
             const snap = await getDoc(ref);
             const data = snap.data();
-            let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
-            let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
+            let dejt = await getFireData("garlic-leaderboard", currentUser.uid);
+            let garAm = dejt.garlic;
+            let monAm = dejt.money;
             if (data.type==="sell") {
               if (newType==="sell"){
                 if (garAm<(newAmount-data.amount)) return alert("Za mało czosnku");
@@ -672,8 +668,9 @@
       tradeForm.addEventListener("submit", async (event) => {
         if (tradeQ.value > data.amount) return alert("Za duża wartość!!!");
         event.preventDefault();
-        let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
-        let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
+        let dejt = await getFireData("garlic-leaderboard", currentUser.uid);
+        let garAm = dejt.garlic;
+        let monAm = dejt.money;
         if (data.type==="sell"){
           if (monAm<(data.price*tradeQ.value)) return alert("Za mało pieniędzy");
           await changeStats(currentUser.uid, tradeQ.value, -1 * data.price * tradeQ.value);
