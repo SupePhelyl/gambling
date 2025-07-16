@@ -433,8 +433,16 @@
       if (!name || amount <= 0 || price <= 0) {
         return alert("Proszę podać poprawne dane.");
       }
-      if (type==="sell") await changeStats(currentUser.uid, -1 * amount, 0);
-      if (type==="buy") await changeStats(currentUser.uid, 0, -1 * amount * price);
+      let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
+      let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
+      if (type==="sell") {
+        if (garAm<amount) return alert("Za mało czosnku");
+        await changeStats(currentUser.uid, -1 * amount, 0);
+      }
+      if (type==="buy") {
+        if (monAm<(amount * price)) return alert("Za mało pieniędzy");
+        await changeStats(currentUser.uid, 0, -1 * amount * price);
+      }
 
       try {
         await addDoc(collection(db, "offers"), {
@@ -579,16 +587,22 @@
             const ref = doc(db, "offers", id);
             const snap = await getDoc(ref);
             const data = snap.data();
+            let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
+            let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
             if (data.type==="sell") {
               if (newType==="sell"){
+                if (garAm<(newAmount-data.amount)) return alert("Za mało czosnku");
                 await changeStats(currentUser.uid, data.amount - newAmount, 0);
               } else if (newType==="buy"){
+                if (monAm<(newAmount*newPrice)) return alert("Za mało pieniędzy");
                 await changeStats(currentUser.uid, data.amount, -1 * newAmount * newPrice);
               }
             } else if (data.type==="buy"){
               if (newType==="sell") {
+                if (garAm<newAmount) return alert("Za mało czosnku");
                 await changeStats(currentUser.uid, -1 * newAmount, data.amount * data.price);
               } else if (newType==="buy"){
+                if (monAm<((newAmount*newPrice))-(data.amount*data.price)) return alert("Za mało pieniędzy");
                 await changeStats(currentUser.uid, 0, (data.amount * data.price) - (newAmount * newPrice));
               }
             }
@@ -652,10 +666,14 @@
       tradeForm.addEventListener("submit", async (event) => {
         if (tradeQ.value > data.amount) return alert("Za duża wartość!!!");
         event.preventDefault();
+        let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
+        let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
         if (data.type==="sell"){
+          if (monAm<(data.price*tradeQ.value)) return alert("Za mało pieniędzy");
           await changeStats(currentUser.uid, tradeQ.value, -1 * data.price * tradeQ.value);
           await changeStats(data.userId, 0, data.price * tradeQ.value);
         } else {
+          if (garAm<tradeQ.value) return alert("Za mało czosnku");
           await changeStats(currentUser.uid, -1 * tradeQ.value, data.price * tradeQ.value);
           await changeStats(data.userId, tradeQ.value, 0);
         }
