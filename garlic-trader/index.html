@@ -435,6 +435,8 @@
       }
       let garAm = await getFireData("garlic-leaderboard", currentUser.uid).garlic;
       let monAm = await getFireData("garlic-leaderboard", currentUser.uid).money;
+      alert(garAm);
+      alert(monAm);
       if (type==="sell") {
         if (garAm<amount) return alert("Za mało czosnku");
         await changeStats(currentUser.uid, -1 * amount, 0);
