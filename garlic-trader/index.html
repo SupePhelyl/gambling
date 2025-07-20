@@ -338,7 +338,13 @@
         document.querySelector('[data-tab="toplist"]').click();
       }
     });
-
+    async function reloadStats(){
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      garlicCount.textContent = data.garlic;
+      moneyCount.textContent = data.money;
+    }
     async function loadOrCreatePlayer(user) {
       const ref = doc(db, "garlic-leaderboard", user.uid);
       const snap = await getDoc(ref);
@@ -442,7 +448,7 @@
         lastGenerated: farm.now
       });
       await changeStats(currentUser.uid, 0,0);
-    
+      await reloadStats();
       garlicCount.textContent = data.garlic + collected;
       renderFarmUI();
     }
