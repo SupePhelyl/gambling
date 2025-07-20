@@ -199,16 +199,18 @@
       </div>
     </div>
 
-    <div id="farm" class="tab-content hidden">
-      <p>Farma czosnku – tu możesz zasadzić, zebrać i zarządzać zasobami.</p>
-      <button class="button" id="collect-button">Zbierz czosnek</button>
-      <div>
-        <button class="button" id="update-field-size">Powiększ Farmę</button>
-        <button class="button" id="fertilize-field">Nawóź Farmę</button>
-        <button class="button" id="automate-field">Automatyzuj Farmę</button>
-        <button class="button" id="update-storage">Powiększ Magazyn</button>
+    <div id="farm-container">
+      <p>Farma czosnku – generuje czosnek w czasie rzeczywistym.</p>
+      <div id="farm-stats"></div>
+      <div style="margin-top:10px;">
+        <button class="button" id="collect-button">Zbierz czosnek</button>
+        <button class="button" id="upgrade-farm">Powiększ Farmę</button>
+        <button class="button" id="upgrade-fertilizer">Nawóź Farmę</button>
+        <button class="button" id="upgrade-automation">Automatyzuj Farmę</button>
+        <button class="button" id="upgrade-storage">Powiększ Magazyn</button>
       </div>
     </div>
+
 
     <div id="toplist" class="tab-content">
       <p>🥇 Top gracze wg ilości czosnku:</p>
@@ -341,7 +343,17 @@
       const ref = doc(db, "garlic-leaderboard", user.uid);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
-        await setDoc(ref, { name: user.displayName, garlic: 0, money: 100 });
+        await setDoc(ref, {
+          name: user.displayName,
+          garlic: 0,
+          money: 100,
+          farmLevel: 0,
+          fertilizerLevel: 0,
+          automationLevel: 0,
+          storageLevel: 0,
+          garlicInFarm: 0,
+          lastGenerated: Date.now()
+        });
         garlicCount.textContent = 1;
         moneyCount.textContent = 100;
       } else {
@@ -369,6 +381,60 @@
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
     }
+    function renderFarmUI() {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      getDoc(ref).then(snap => {
+        const data = snap.data();
+        const farm = getFarmState(data);
+    
+        const farmDiv = document.getElementById("farm-stats");
+        const automation = data.automationLevel || 0;
+    
+        farmDiv.innerHTML = `
+          🌱 Poziom farmy: ${data.farmLevel}<br/>
+          🧪 Nawóz: ${data.fertilizerLevel}<br/>
+          🤖 Automatyzacja: ${automation}<br/>
+          🧺 Magazyn: ${data.storageLevel} (max: ${100 + 50 * data.storageLevel})<br/>
+          ⏳ Nast. cykl za: ${Math.floor(farm.nextCycle / 1000)}s<br/>
+          🧄 W farmie: ${Math.floor(farm.garlicInFarm)}
+        `;
+    
+        if (automation >= 1 && farm.garlicInFarm > 0) {
+          const interval = 15000 * Math.pow(0.85, automation - 1); // szybciej co poziom
+          const now = Date.now();
+          if (!window.lastAutoCollect || now - window.lastAutoCollect > interval) {
+            collectGarlic(true);
+            window.lastAutoCollect = now;
+          }
+        }
+      });
+    }
+    
+    setInterval(renderFarmUI, 1000);
+
+    async function collectGarlic(auto = false) {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const farm = getFarmState(data);
+      const collected = Math.floor(farm.garlicInFarm);
+    
+      if (collected <= 0) {
+        if (!auto) alert("Brak czosnku do zebrania!");
+        return;
+      }
+    
+      await setDoc(ref, {
+        ...data,
+        garlic: data.garlic + collected,
+        garlicInFarm: 0,
+        lastGenerated: farm.now
+      });
+    
+      garlicCount.textContent = data.garlic + collected;
+      renderFarmUI();
+    }
+    document.getElementById("collect-button").addEventListener("click", () => collectGarlic(false));
 
     async function loadTopLists() {
       const garlicDiv = document.getElementById("top-garlic");
@@ -521,6 +587,47 @@
         console.error(e);
       }
     }
+    function getFarmState(data) {
+      const now = Date.now();
+      const delta = now - (data.lastGenerated || now);
+    
+      const baseCycle = 10000; // 10s
+      const fertilizerEffect = Math.pow(0.85, data.fertilizerLevel || 0);
+      const cycleTime = baseCycle * fertilizerEffect;
+    
+      const farmPower = (data.farmLevel || 0); // czosnek per tick
+      const maxGarlic = 100 + 50 * (data.storageLevel || 0); // max magazyn
+    
+      const ticks = Math.floor(delta / cycleTime);
+      const totalGarlic = Math.min(
+        (data.garlicInFarm || 0) + ticks * farmPower,
+        maxGarlic
+      );
+    
+      return {
+        garlicInFarm: totalGarlic,
+        nextCycle: cycleTime - (delta % cycleTime),
+        now
+      };
+    }
+    async function saveFarmState(update = {}) {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const farm = getFarmState(data);
+    
+      await setDoc(ref, {
+        ...data,
+        garlicInFarm: farm.garlicInFarm,
+        lastGenerated: farm.now,
+        ...update
+      });
+    
+      garlicCount.textContent = data.garlic;
+      moneyCount.textContent = data.money;
+      renderFarmUI();
+    }
+
 
     // Tworzy element oferty z przyciskiem "Handluj"
     function createOfferElement(id, data) {
@@ -661,6 +768,77 @@
       div.appendChild(actions);
       return div;
     }
+    function getCost(level, base = 10, rate = 2) {
+      return Math.floor(base * Math.pow(rate, level));
+    }
+    
+    document.getElementById("upgrade-farm").onclick = async () => {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const cost = getCost(data.farmLevel || 0, 20, 1.8);
+    
+      if ((data.garlic || 0) < cost) return alert(`Potrzebujesz ${cost} czosnku.`);
+      await setDoc(ref, {
+        ...data,
+        garlic: data.garlic - cost,
+        farmLevel: (data.farmLevel || 0) + 1,
+        lastGenerated: Date.now()
+      });
+      garlicCount.textContent = data.garlic - cost;
+      renderFarmUI();
+    };
+    
+    document.getElementById("upgrade-fertilizer").onclick = async () => {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const cost = getCost(data.fertilizerLevel || 0, 50, 2);
+    
+      if ((data.money || 0) < cost) return alert(`Potrzebujesz $${cost}.`);
+      await setDoc(ref, {
+        ...data,
+        money: data.money - cost,
+        fertilizerLevel: (data.fertilizerLevel || 0) + 1,
+        lastGenerated: Date.now()
+      });
+      moneyCount.textContent = data.money - cost;
+      renderFarmUI();
+    };
+    
+    document.getElementById("upgrade-automation").onclick = async () => {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const cost = getCost(data.automationLevel || 0, 100, 2.5);
+    
+      if ((data.money || 0) < cost) return alert(`Potrzebujesz $${cost}.`);
+      await setDoc(ref, {
+        ...data,
+        money: data.money - cost,
+        automationLevel: (data.automationLevel || 0) + 1,
+        lastGenerated: Date.now()
+      });
+      moneyCount.textContent = data.money - cost;
+      renderFarmUI();
+    };
+    
+    document.getElementById("upgrade-storage").onclick = async () => {
+      const ref = doc(db, "garlic-leaderboard", currentUser.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const cost = getCost(data.storageLevel || 0, 50, 2);
+    
+      if ((data.money || 0) < cost) return alert(`Potrzebujesz $${cost}.`);
+      await setDoc(ref, {
+        ...data,
+        money: data.money - cost,
+        storageLevel: (data.storageLevel || 0) + 1
+      });
+      moneyCount.textContent = data.money - cost;
+      renderFarmUI();
+    };
+
     
 
 
