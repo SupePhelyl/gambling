@@ -387,7 +387,8 @@
 		
 		    // 3. Przeskalowanie do zakresu 0.18 - 4
 		    const min = 0.18;
-		    const max = 4;min) * normalized;
+		    const max = 4;
+		    const scaled = min + (max - min) * normalized;
 		
 		    return parseFloat(scaled.toFixed(3));
 		}
