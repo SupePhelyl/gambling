@@ -377,7 +377,10 @@
       let newGar = parseInt(garlicAm,10)+parseInt(data.garlic,10);
       let newMon = parseInt(moneyAm,10)+parseInt(data.money,10);
       
-      await setDoc(ref, { name: data.name, garlic: newGar, money: newMon });
+      const maxGarlic = 100 + 50 * (data.storageLevel || 0);
+      newGar = Math.min(newGar, maxGarlic);
+      
+      await setDoc(ref, {...data, name: data.name, garlic: newGar, money: newMon });
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
     }
@@ -442,9 +445,10 @@
       garlicCount.textContent = data.garlic + collected;
       renderFarmUI();
     }
-    document.getElementById("collect-button").addEventListener("click", () => {
+    document.getElementById("collect-button").addEventListener("click", async () => {
       collectGarlic(false);
       renderFarmUI();
+      await changeStats(currentUser.uid, 0,0);
     });
 
     async function loadTopLists() {
@@ -611,13 +615,10 @@
     
       const ticks = Math.floor(delta / cycleTime);
       const garlicGenerated = ticks * farmPower;
-      const garlicInFarm = Math.min(
-        (data.garlicInFarm || 0) + garlicGenerated,
-        maxGarlic
-      );
+      const garlicInFarm = 
+        (data.garlicInFarm || 0) + garlicGenerated);
     
       const nextCycle = cycleTime - (delta % cycleTime);
-      console.error(delta);
       return {
         garlicInFarm,
         nextCycle,
