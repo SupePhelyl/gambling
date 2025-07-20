@@ -615,8 +615,7 @@
     
       const ticks = Math.floor(delta / cycleTime);
       const garlicGenerated = ticks * farmPower;
-      const garlicInFarm = 
-        (data.garlicInFarm || 0) + garlicGenerated);
+      const garlicInFarm = (data.garlicInFarm || 0) + garlicGenerated;
     
       const nextCycle = cycleTime - (delta % cycleTime);
       return {
