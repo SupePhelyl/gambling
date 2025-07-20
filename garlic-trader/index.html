@@ -314,7 +314,7 @@
 
     onAuthStateChanged(auth, async user => {
       const marketTab = document.querySelector('[data-tab="market"]');
-      const farmTab = document.querySelector('[data-tab="farm"]');
+      const farmTab = document.querySelector('[data-tab="farm-container"]');
       if (user) {
         currentUser = user;
         loginBtn.classList.add("hidden");
