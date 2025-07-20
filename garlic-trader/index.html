@@ -381,32 +381,40 @@
       garlicCount.textContent = newGar;
       moneyCount.textContent = newMon;
     }
-    function renderFarmUI() {
+    async function renderFarmUI() {
       const ref = doc(db, "garlic-leaderboard", currentUser.uid);
-      getDoc(ref).then(snap => {
-        const data = snap.data();
-        const farm = getFarmState(data);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      const farm = getFarmState(data);
+      const automation = data.automationLevel || 0;
     
-        const farmDiv = document.getElementById("farm-stats");
-        const automation = data.automationLevel || 0;
+      const farmLevel = data.farmLevel || 0;
+      const fertilizerLevel = data.fertilizerLevel || 0;
+      const storageLevel = data.storageLevel || 0;
+      const autoLevel = data.automationLevel || 0;
     
-        farmDiv.innerHTML = `
-          🌱 Poziom farmy: ${data.farmLevel}<br/>
-          🧪 Nawóz: ${data.fertilizerLevel}<br/>
-          🤖 Automatyzacja: ${automation}<br/>
-          🧺 Magazyn: ${data.storageLevel} (max: ${100 + 50 * data.storageLevel})<br/>
-          ⏳ Nast. cykl za: ${Math.floor(farm.nextCycle / 1000)}s<br/>
-          🧄 W farmie: ${Math.floor(farm.garlicInFarm)}
-        `;
+      const farmCost = getCost(farmLevel, 20, 1.8);
+      const fertCost = getCost(fertilizerLevel, 50, 2);
+      const autoCost = getCost(autoLevel, 100, 2.5);
+      const storeCost = getCost(storageLevel, 50, 2);
     
-        if (automation >= 1 && farm.garlicInFarm > 0) {
-          const interval = 15000 * Math.pow(0.85, automation - 1); // szybciej co poziom
-          const now = Date.now();
-          if (!window.lastAutoCollect || now - window.lastAutoCollect > interval) {
-            collectGarlic(true);
-            window.lastAutoCollect = now;
-          }
-        }
+      const maxGarlic = 100 + 50 * storageLevel;
+    
+      const farmDiv = document.getElementById("farm-stats");
+      farmDiv.innerHTML = `
+        🌱 Poziom farmy: ${farmLevel} – koszt: 🧄 ${farmCost}<br/>
+        🧪 Nawóz: ${fertilizerLevel} – koszt: 💵 ${fertCost}<br/>
+        🤖 Automatyzacja: ${autoLevel} – koszt: 💵 ${autoCost}<br/>
+        🧺 Magazyn: ${storageLevel} (max: ${maxGarlic}) – koszt: 💵 ${storeCost}<br/>
+        ⏳ Nast. cykl za: ${Math.floor(farm.nextCycle / 1000)}s<br/>
+        🧄 W farmie: ${Math.floor(farm.garlicInFarm)}
+      `;
+    
+      // zapis stanu farmy (opcjonalny)
+      await setDoc(ref, {
+        ...data,
+        garlicInFarm: farm.garlicInFarm,
+        lastGenerated: farm.now
       });
     }
     
@@ -434,7 +442,10 @@
       garlicCount.textContent = data.garlic + collected;
       renderFarmUI();
     }
-    document.getElementById("collect-button").addEventListener("click", () => collectGarlic(false));
+    document.getElementById("collect-button").addEventListener("click", () => {
+      collectGarlic(false);
+      renderFarmUI();
+    });
 
     async function loadTopLists() {
       const garlicDiv = document.getElementById("top-garlic");
@@ -595,21 +606,25 @@
       const fertilizerEffect = Math.pow(0.85, data.fertilizerLevel || 0);
       const cycleTime = baseCycle * fertilizerEffect;
     
-      const farmPower = (data.farmLevel || 0); // czosnek per tick
-      const maxGarlic = 100 + 50 * (data.storageLevel || 0); // max magazyn
+      const farmPower = data.farmLevel || 0;
+      const maxGarlic = 100 + 50 * (data.storageLevel || 0);
     
       const ticks = Math.floor(delta / cycleTime);
-      const totalGarlic = Math.min(
-        (data.garlicInFarm || 0) + ticks * farmPower,
+      const garlicGenerated = ticks * farmPower;
+      const garlicInFarm = Math.min(
+        (data.garlicInFarm || 0) + garlicGenerated,
         maxGarlic
       );
     
+      const nextCycle = cycleTime - (delta % cycleTime);
+    
       return {
-        garlicInFarm: totalGarlic,
-        nextCycle: cycleTime - (delta % cycleTime),
+        garlicInFarm,
+        nextCycle,
         now
       };
     }
+
     async function saveFarmState(update = {}) {
       const ref = doc(db, "garlic-leaderboard", currentUser.uid);
       const snap = await getDoc(ref);
@@ -627,6 +642,7 @@
       moneyCount.textContent = data.money;
       renderFarmUI();
     }
+
 
 
     // Tworzy element oferty z przyciskiem "Handluj"
