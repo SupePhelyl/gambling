@@ -399,7 +399,11 @@
       const storeCost = getCost(storageLevel, 50, 2);
     
       const maxGarlic = 100 + 50 * storageLevel;
-    
+      document.getElementById("upgrade-farm").innerText = `Powiększ farmę (${farmCost} 🧄)`;
+      document.getElementById("upgrade-fertilizer").innerText = `Nawóź farmę (${fertCost} 💵)`;
+      document.getElementById("upgrade-automation").innerText = `Automatyzuj (${autoCost} 💵)`;
+      document.getElementById("upgrade-storage").innerText = `Powiększ magazyn (${storeCost} 💵)`;
+
       const farmDiv = document.getElementById("farm-stats");
       farmDiv.innerHTML = `
         🌱 Poziom farmy: ${farmLevel} – koszt: 🧄 ${farmCost}<br/>
@@ -409,7 +413,7 @@
         ⏳ Nast. cykl za: ${Math.floor(farm.nextCycle / 1000)}s<br/>
         🧄 W farmie: ${Math.floor(farm.garlicInFarm)}
       `;
-    
+      
       // zapis stanu farmy (opcjonalny)
       await setDoc(ref, {
         ...data,
