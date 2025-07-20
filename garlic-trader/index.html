@@ -441,14 +441,14 @@
         garlicInFarm: 0,
         lastGenerated: farm.now
       });
+      await changeStats(currentUser.uid, 0,0);
     
       garlicCount.textContent = data.garlic + collected;
       renderFarmUI();
     }
-    document.getElementById("collect-button").addEventListener("click", async () => {
+    document.getElementById("collect-button").addEventListener("click", () => {
       collectGarlic(false);
       renderFarmUI();
-      await changeStats(currentUser.uid, 0,0);
     });
 
     async function loadTopLists() {
