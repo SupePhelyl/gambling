@@ -717,6 +717,11 @@
       const amountEl = document.createElement("div");
       amountEl.className = "offer-amount";
       amountEl.textContent = `${amountLabel}: ${data.amount} szt.`;
+
+      if(data.amount===0) {
+	await deleteDoc(doc(db, "offers", id));
+        loadOffers();
+      }
     
       details.appendChild(nameEl);
       details.appendChild(userEl);
