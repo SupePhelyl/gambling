@@ -448,8 +448,8 @@
         lastGenerated: farm.now
       });
       await changeStats(currentUser.uid, 0,0);
-      await reloadStats();
       garlicCount.textContent = data.garlic + collected;
+      await reloadStats();
       renderFarmUI();
     }
     document.getElementById("collect-button").addEventListener("click", () => {
