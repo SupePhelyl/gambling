@@ -351,7 +351,7 @@
       if (!snap.exists()) {
         await setDoc(ref, {
           name: user.displayName,
-          garlic: 0,
+          garlic: 5,
           money: 100,
           farmLevel: 0,
           fertilizerLevel: 0,
@@ -360,7 +360,7 @@
           garlicInFarm: 0,
           lastGenerated: Date.now()
         });
-        garlicCount.textContent = 1;
+        garlicCount.textContent = 5;
         moneyCount.textContent = 100;
       } else {
         const data = snap.data();
@@ -373,7 +373,25 @@
       const snap = await getDoc(ref);
       const data = snap.data();
       return data;
-    }
+    } 
+		function tokenToNumber(token) {
+		    // 1. Zamiana tokena na liczbę przez sumę kodów znaków
+		    let hash = 0;
+		    for (let i = 0; i < token.length; i++) {
+		        hash += token.charCodeAt(i);
+		    }
+		
+		    // 2. Normalizacja - zakładamy maksymalną możliwą sumę dla długości 28 (zabezpieczenie)
+		    const maxHash = 28 * 122; // zakładając maksymalny znak: 'z' (kod 122)
+		    const normalized = hash / maxHash;
+		
+		    // 3. Przeskalowanie do zakresu 0.18 - 4
+		    const min = 0.18;
+		    const max = 4;min) * normalized;
+		
+		    return parseFloat(scaled.toFixed(3));
+		}
+
     
     async function changeStats(user, garlicAm, moneyAm) {
       
@@ -402,7 +420,7 @@
       const storageLevel = data.storageLevel || 0;
       const autoLevel = data.automationLevel || 0;
     
-      const farmCost = getCost(farmLevel, 20, 1.8);
+      const farmCost = Math.floor(tokenToNumber(currentUser.uid) * getCost(farmLevel, 20, 1.8));
       const fertCost = getCost(fertilizerLevel, 50, 2);
       const autoCost = getCost(autoLevel, 100, 2.5);
       const storeCost = getCost(storageLevel, 50, 2);
@@ -812,7 +830,7 @@
       const ref = doc(db, "garlic-leaderboard", currentUser.uid);
       const snap = await getDoc(ref);
       const data = snap.data();
-      const cost = getCost(data.farmLevel || 0, 20, 1.8);
+      const cost = Math.floor(tokenToNumber(currentUser.uid) * getCost(data.farmLevel || 0, 20, 1.8));
       const farm = getFarmState(data);
     
       if ((data.garlic || 0) < cost) return alert(`Potrzebujesz ${cost} czosnku.`);
