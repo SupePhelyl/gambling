@@ -415,11 +415,7 @@
       `;
       
       // zapis stanu farmy (opcjonalny)
-      await setDoc(ref, {
-        ...data,
-        garlicInFarm: farm.garlicInFarm,
-        lastGenerated: farm.now
-      });
+      
     }
     
     setInterval(renderFarmUI, 1000);
@@ -621,7 +617,7 @@
       );
     
       const nextCycle = cycleTime - (delta % cycleTime);
-    
+      console.error(delta);
       return {
         garlicInFarm,
         nextCycle,
