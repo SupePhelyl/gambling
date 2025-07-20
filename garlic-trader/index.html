@@ -719,7 +719,7 @@
       amountEl.textContent = `${amountLabel}: ${data.amount} szt.`;
 
       if(data.amount===0) {
-	await deleteDoc(doc(db, "offers", id));
+	deleteDoc(doc(db, "offers", id));
         loadOffers();
       }
     
