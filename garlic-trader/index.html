@@ -418,6 +418,7 @@
         🌱 Poziom farmy: ${farmLevel} – koszt: 🧄 ${farmCost}<br/>
         🧪 Nawóz: ${fertilizerLevel} – koszt: 💵 ${fertCost}<br/>
         🤖 Automatyzacja: ${autoLevel} – koszt: 💵 ${autoCost}<br/>
+        🧑‍🌾 Nast. zebranie za: ${Math.floor(farm.nextCollect / 1000)}s<br/>
         🧺 Magazyn: ${storageLevel} (max: ${maxGarlic}) – koszt: 💵 ${storeCost}<br/>
         ⏳ Nast. cykl za: ${Math.floor(farm.nextCycle / 1000)}s<br/>
         🧄 W farmie: ${Math.floor(farm.garlicInFarm)}
@@ -612,9 +613,14 @@
       const now = Date.now();
       const delta = now - (data.lastGenerated || now);
     
-      const baseCycle = 10000; // 10s
+      const baseCycle = 20000; // 20s
+      const baseColTime = 600000;
       const fertilizerEffect = Math.pow(0.85, data.fertilizerLevel || 0);
+      let amp = 1;
+      if ((data.automationLevel || 0)===0) amp = 0;
+      const automationEffect = Math.pow(0.65, data.automationLevel || 0) * amp;
       const cycleTime = baseCycle * fertilizerEffect;
+      const colTime = baseColTime * automationEffect;
     
       const farmPower = data.farmLevel || 0;
       const maxGarlic = 100 + 50 * (data.storageLevel || 0);
@@ -624,9 +630,12 @@
       const garlicInFarm = (data.garlicInFarm || 0) + garlicGenerated;
     
       const nextCycle = cycleTime - (delta % cycleTime);
+      const nextCollect = colTime - (delta % colTime);
+      
       return {
         garlicInFarm,
         nextCycle,
+        nextCollect,
         now
       };
     }
@@ -799,13 +808,15 @@
       const snap = await getDoc(ref);
       const data = snap.data();
       const cost = getCost(data.farmLevel || 0, 20, 1.8);
+      const farm = getFarmState(data);
     
       if ((data.garlic || 0) < cost) return alert(`Potrzebujesz ${cost} czosnku.`);
       await setDoc(ref, {
         ...data,
         garlic: data.garlic - cost,
         farmLevel: (data.farmLevel || 0) + 1,
-        lastGenerated: Date.now()
+        lastGenerated: Date.now(),
+        garlicInFarm: farm.garlicInFarm
       });
       garlicCount.textContent = data.garlic - cost;
       renderFarmUI();
@@ -816,13 +827,15 @@
       const snap = await getDoc(ref);
       const data = snap.data();
       const cost = getCost(data.fertilizerLevel || 0, 50, 2);
+      const farm = getFarmState(data);
     
       if ((data.money || 0) < cost) return alert(`Potrzebujesz $${cost}.`);
       await setDoc(ref, {
         ...data,
         money: data.money - cost,
         fertilizerLevel: (data.fertilizerLevel || 0) + 1,
-        lastGenerated: Date.now()
+        lastGenerated: Date.now(),
+        garlicInFarm: farm.garlicInFarm
       });
       moneyCount.textContent = data.money - cost;
       renderFarmUI();
@@ -833,13 +846,15 @@
       const snap = await getDoc(ref);
       const data = snap.data();
       const cost = getCost(data.automationLevel || 0, 100, 2.5);
+      const farm = getFarmState(data);
     
       if ((data.money || 0) < cost) return alert(`Potrzebujesz $${cost}.`);
       await setDoc(ref, {
         ...data,
         money: data.money - cost,
         automationLevel: (data.automationLevel || 0) + 1,
-        lastGenerated: Date.now()
+        lastGenerated: Date.now(),
+        garlicInFarm: farm.garlicInFarm
       });
       moneyCount.textContent = data.money - cost;
       renderFarmUI();
@@ -850,12 +865,14 @@
       const snap = await getDoc(ref);
       const data = snap.data();
       const cost = getCost(data.storageLevel || 0, 50, 2);
+      const farm = getFarmState(data);
     
       if ((data.money || 0) < cost) return alert(`Potrzebujesz $${cost}.`);
       await setDoc(ref, {
         ...data,
         money: data.money - cost,
-        storageLevel: (data.storageLevel || 0) + 1
+        storageLevel: (data.storageLevel || 0) + 1,
+        garlicInFarm: farm.garlicInFarm
       });
       moneyCount.textContent = data.money - cost;
       renderFarmUI();
