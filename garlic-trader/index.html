@@ -614,11 +614,11 @@
       const delta = now - (data.lastGenerated || now);
     
       const baseCycle = 20000; // 20s
-      const baseColTime = 600000;
-      const fertilizerEffect = Math.pow(0.85, data.fertilizerLevel || 0);
+      const baseColTime = 800000;
+      const fertilizerEffect = Math.pow(0.87, data.fertilizerLevel || 0);
       let amp = 1;
       if ((data.automationLevel || 0)===0) amp = 0;
-      const automationEffect = Math.pow(0.65, data.automationLevel || 0) * amp;
+      const automationEffect = Math.pow(0.75, data.automationLevel || 0) * amp;
       const cycleTime = baseCycle * fertilizerEffect;
       const colTime = baseColTime * automationEffect;
     
