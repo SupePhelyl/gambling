@@ -199,7 +199,7 @@
       </div>
     </div>
 
-    <div id="farm-container">
+    <div id="farm">
       <p>Farma czosnku – generuje czosnek w czasie rzeczywistym.</p>
       <div id="farm-stats"></div>
       <div style="margin-top:10px;">
@@ -314,7 +314,7 @@
 
     onAuthStateChanged(auth, async user => {
       const marketTab = document.querySelector('[data-tab="market"]');
-      const farmTab = document.querySelector('[data-tab="farm-container"]');
+      const farmTab = document.querySelector('[data-tab="farm"]');
       if (user) {
         currentUser = user;
         loginBtn.classList.add("hidden");
