@@ -631,6 +631,11 @@
     
       const nextCycle = cycleTime - (delta % cycleTime);
       const nextCollect = colTime - (delta % colTime);
+      if (Math.floor(nextCollect/1000)===0) {
+        collectGarlic(false);
+        renderFarmUI();
+      }
+      
       
       return {
         garlicInFarm,
