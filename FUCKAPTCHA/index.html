@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rejestracja z FUCKAPTCHA</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+      background: white;
+      padding: 20px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+    }
+    .captcha-box {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+      justify-content: center;
+    }
+    .images img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 6px;
+    }
+    .images img.selected {
+      border-color: blue;
+    }
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Rejestracja</h2>
+    <form id="registerForm">
+      <input id="em" type="email" placeholder="Email" required />
+      <input id = "tx" type="text" placeholder="Nazwa użytkownika" required />
+      <input id = "pass" type="password" placeholder="Hasło" required />
+      <button type="button" onclick="startCaptcha()">Zarejestruj</button>
+    </form>
+
+    <div id="fuckaptcha" class="captcha-box hidden">
+      <div id="step1">
+        <p><input type="checkbox" id="notRobot" /> Nie jestem robotem</p>
+        <button onclick="nextStep1()">Dalej</button>
+      </div>
+
+      <div id="step2" class="hidden">
+        <p>Wybierz wszystkie obrazy z kotami:</p>
+        <div class="images" id="imagesContainer"></div>
+        <button onclick="validateCats()">Dalej</button>
+      </div>
+
+      <div id="step3" class="hidden">
+        <p>Czy jesteś robotem?</p>
+        <button onclick="robotAnswer(true)">Tak</button>
+        <button onclick="robotAnswer(false)">Nie</button>
+      </div>
+
+      <div id="step4" class="hidden">
+        <p>Czy jesteś robotem?</p>
+        <input type="text" id="finalInput" placeholder="Wpisz coś..." />
+        <button onclick="finalStep()">Wyślij</button>
+      </div>
+    </div>
+
+    <div id="successMessage" class="hidden">
+      <h3>Zarejestrowano pomyślnie!</h3>
+    </div>
+  </div>
+
+  <script>
+    const fuckaptcha = document.getElementById('fuckaptcha');
+    const steps = {
+      1: document.getElementById('step1'),
+      2: document.getElementById('step2'),
+      3: document.getElementById('step3'),
+      4: document.getElementById('step4'),
+    };
+
+    const imageSources = {
+      cats: [
+        "https://placecats.com/100/100",
+        "https://placecats.com/100/101",
+        "https://placecats.com/100/102",
+        "https://placecats.com/100/103",
+        "https://placecats.com/100/104"
+      ],
+      notCats: [
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Golde33443.jpg/100px-Golde33443.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/1/1e/Audi_A4_front.JPG",
+        "https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/e/eb/Ash_Tree_-_geograph.org.uk_-_590710.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/6/66/Wikipedia_homepage_on_a_large_Android_phone%2C_2015-04-16.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/3/3a/Gluehlampe_01_KMJ.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/b/b6/Gutenberg_Bible%2C_Lenox_Copy%2C_New_York_Public_Library%2C_2009._Pic_01.jpg"
+      ]
+    };
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function startCaptcha() {
+      email = document.getElementById('em');
+      text = document.getElementById('tx');
+      password = document.getElementById('pass');
+      if(email.value===""||text.value===""||password.value==="") return alert("Wpisz poprawne dane!");
+      document.getElementById('registerForm').classList.add('hidden');
+      fuckaptcha.classList.remove('hidden');
+    }
+
+    function nextStep1() {
+      if (!document.getElementById('notRobot').checked) {
+        alert("Zaznacz, że nie jesteś robotem!");
+        return;
+      }
+      resetSteps();
+      nextStep(2);
+    }
+
+    function nextStep(stepNumber) {
+      Object.values(steps).forEach(s => s.classList.add('hidden'));
+      steps[stepNumber].classList.remove('hidden');
+
+      if (stepNumber === 2) generateImages();
+    }
+
+    function generateImages() {
+      const container = document.getElementById('imagesContainer');
+      container.innerHTML = '';
+
+      const selectedCats = shuffle([...imageSources.cats]).slice(0, 3);
+      const selectedNotCats = shuffle([...imageSources.notCats]).slice(0, 6);
+      let allImages = selectedCats.map(src => ({ src, isCat: true }))
+        .concat(selectedNotCats.map(src => ({ src, isCat: false })));
+
+      allImages = shuffle(allImages);
+
+      allImages.forEach((imgObj) => {
+        const img = document.createElement('img');
+        img.src = imgObj.src;
+        img.dataset.isCat = imgObj.isCat;
+        img.onclick = () => img.classList.toggle('selected');
+        container.appendChild(img);
+      });
+    }
+
+    function validateCats() {
+      const images = document.querySelectorAll('#imagesContainer img');
+      let isValid = true;
+
+      images.forEach(img => {
+        const isCat = img.dataset.isCat === "true";
+        const selected = img.classList.contains('selected');
+        if (isCat !== selected) {
+          isValid = false;
+        }
+      });
+
+      if (!isValid) {
+        alert("Źle zaznaczyłeś koty. Spróbuj jeszcze raz.");
+        nextStep(2);
+      } else {
+        nextStep(3);
+      }
+    }
+
+    function robotAnswer(isRobot) {
+      if (isRobot) {
+        alert("Wykryto robota! Zrestartuj test.");
+        location.reload();
+      } else {
+        nextStep(4);
+      }
+    }
+
+    function finalStep() {
+      const input = document.getElementById('finalInput').value.toLowerCase();
+      const swears = ['kurwa', 'fuck', 'shit', 'pierdol', 'chuj', 'idiot','huj','jebać'];
+
+      if (swears.some(word => input.includes(word))) {
+        fuckaptcha.classList.add('hidden');
+        document.getElementById('successMessage').classList.remove('hidden');
+      } else if(inpit==='tak'){
+        location.reload();
+      }else {
+        resetSteps();
+        nextStep(1);
+      }
+    }
+    function resetSteps() {
+      // Resetuje checkbox
+      document.getElementById('notRobot').checked = false;
+
+      // Czyści pole tekstowe z przekleństwem
+      document.getElementById('finalInput').value = '';
+
+      // Czyści zaznaczone obrazy
+      const images = document.querySelectorAll('#imagesContainer img');
+      images.forEach(img => img.classList.remove('selected'));
+    }
+  </script>
+</body>
+</html>
